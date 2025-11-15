@@ -1,21 +1,27 @@
 {
   "expo": {
-    "name": "expo-on-replit",
-    "slug": "expo-on-replit",
+    "name": "GeoDex",
+    "slug": "geodex-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "geodex",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.geodex.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      }
+        "backgroundColor": "#2563EB"
+      },
+      "package": "com.geodex.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -24,13 +30,14 @@
     },
     "plugins": [
       "expo-router",
+      "expo-location",
       [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#2563EB"
         }
       ]
     ],

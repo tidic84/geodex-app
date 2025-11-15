@@ -1,190 +1,135 @@
-# Welcome to Expo on Replit 👋
+# GeoDex 🗺️
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app), and adapted to use on Replit.
+Une application mobile moderne de découverte de lieux d'intérêt géographiques, construite avec Expo et React Native.
 
-Expo is an open-source React Native framework for apps that run natively on Android, iOS, and the web. Expo brings together the best of mobile and the web and enables many important features for building and scaling an app such as live updates, instantly sharing your app, and web support. 
+## 📱 Fonctionnalités
 
-Using Replit, you can build Expo apps from BOTH your desktop and mobile devices.
+- **Carte Interactive** - Explorez les lieux sur une carte en temps réel avec des marqueurs personnalisés
+- **Découverte** - Parcourez et recherchez des lieux par catégorie avec filtres intelligents
+- **Favoris** - Sauvegardez vos lieux préférés pour un accès rapide
+- **Profil** - Suivez vos statistiques d'exploration et gérez vos paramètres
+- **Mode Sombre** - Interface adaptative qui s'ajuste automatiquement à vos préférences système
+- **Design Moderne** - Interface utilisateur épurée avec des composants cohérents et des icônes Ionicons
 
-## Get started
+## 🏗️ Architecture
 
-**Click the Run button to start the app.**
-
-In the output, use the QR code to open the app in [Expo Go](https://expo.dev/go), or open a webview.
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-You can also follow along in our video tutorial [here](https://www.youtube.com/watch?v=aSMYllFeryE).
-
-Here is the structure for the app, all core files are found in `app/`:
+L'application est construite avec une architecture moderne et modulaire :
 
 ```
-.
-├── app                          # Main application directory (Expo Router)
-│   ├── _layout.tsx              # Root layout component for the app
-│   ├── +not-found.tsx           
-│   └── (tabs)                   # Tab navigation group
-├── app.json                     # Expo configuration file
-├── assets                       # Static assets directory
-│   ├── fonts                    # Custom fonts
-│   └── images                   # Image assets
-├── components                   # Reusable component directory
-│   ├── Collapsible.tsx          # Collapsible/expandable component
-│   ├── ExternalLink.tsx         # External link handler component
-│   ├── HapticTab.tsx            # Tab with haptic feedback
-│   ├── HelloWave.tsx            # Wave animation component
-│   ├── ParallaxScrollView.tsx   # Scrollview with parallax effect
-│   ├── __tests__                # Component test directory
-│   ├── ThemedText.tsx           # Theme-aware text component
-│   ├── ThemedView.tsx           # Theme-aware view component
-│   └── ui                       # UI component library
-├── constants                    # Application constants
-│   └── Colors.ts                # Color definitions
-├── expo-env.d.ts                
-├── generated-icon.png           
-├── hooks                        # Custom React hooks
-│   ├── useColorScheme.ts        # Hook for handling color scheme
-│   ├── useColorScheme.web.ts    # Web-specific color scheme hook
-│   └── useThemeColor.ts         # Hook for theme colors
-├── package.json                 # NPM package configuration
-├── package-lock.json            
-├── README.md                    # Project documentation
-├── replit.nix                   
-├── scripts                      
-│   └── reset-project.js         # Project reset script
-└── tsconfig.json                # TypeScript configuration
+geodex-app/
+├── app/                        # Routing (Expo Router)
+│   ├── (tabs)/                # Écrans avec navigation par onglets
+│   │   ├── index.tsx          # Écran Carte
+│   │   ├── explore.tsx        # Écran Découvrir
+│   │   ├── favorites.tsx      # Écran Favoris
+│   │   └── profile.tsx        # Écran Profil
+│   ├── _layout.tsx            # Layout racine
+│   └── +not-found.tsx         # Page 404
+├── components/                 # Composants réutilisables
+│   ├── Button.tsx             # Bouton personnalisé
+│   ├── Card.tsx               # Carte UI
+│   ├── LocationCard.tsx       # Carte de lieu
+│   ├── SearchBar.tsx          # Barre de recherche
+│   ├── ThemedText.tsx         # Texte avec thème
+│   └── ThemedView.tsx         # Vue avec thème
+├── constants/                  # Constantes
+│   └── Colors.ts              # Palette de couleurs
+├── hooks/                      # Hooks personnalisés
+│   ├── useFavorites.ts        # Gestion des favoris
+│   ├── useColorScheme.ts      # Détection du thème
+│   └── useThemeColor.ts       # Couleurs du thème
+└── services/                   # Services métier
+    └── locationService.ts     # Logique de gestion des lieux
 ```
-## Publishing your app
 
-The following steps will guide you through deploying your app from Replit to your iOS device. This tutorial covers:
-	- Creating a preview build
-  - Installing the preview build on your iOS device
+## 🎨 Technologies
 
-While the app will only be useable on _your_ device, this will suffice for building and testing tools. To publish your app on the App store, you'll need to configure your app in App Store Connect.
+- **Expo SDK 52** - Framework React Native
+- **TypeScript** - Typage statique
+- **React Native Maps** - Cartes interactives
+- **AsyncStorage** - Persistance locale
+- **Expo Location** - Géolocalisation
+- **Ionicons** - Icônes modernes
+- **Expo Router** - Navigation basée sur les fichiers
 
-For additional details, refer to the Apple and Expo documentation. 
+## 🚀 Démarrage
 
-### Initial Setup
-
-1. **Remix the Expo Template**
-   - Creates a new project with the latest Expo SDK
-   - Includes essential configurations and dependencies 
-   - Sets up a basic app structure following best practices
-
-2. **Create Apple Developer Account**
-   - Register for a developer account (requires $99/year subscription)
-   - Select appropriate certificate (Development or Distribution)
-   - Select or generate device profile for test device installation
-   - Set up code signing and provisioning profiles
-   - Wait 24-48h for Apple to approve the account
-
-### Build Configuration
-
-3. **Initialize EAS Project**
-   Click the dropdown underneath the "Run" button and select "EAS Init"
-   Alternatively, you can run:
+1. **Installer les dépendances**
    ```bash
-   npx eas init
-   ```
-   - Creates a new EAS project in the current directory
-   - Follow the interactive prompts to configure your project
-
-4. **Update EAS Configuration**
-   Click the dropdown underneath the "Run" button and select "EAS Update"
-   Alternatively, you can run:
-   ```bash
-   npx eas update --auto
-   ```
-   - Sets up Expo Application Services for build management
-   - Creates necessary build profiles in eas.json
-   - Configures over-the-air updates capability
-
-   Expected output:
-   ```bash
-   [expo-cli] Starting Metro Bundler
-   [expo-cli] 
-   ⠸ Exporting...
+   npm install
    ```
 
-5. **Build iOS Preview**
-   Click the dropdown underneath the "Run" button and select "EAS Build iOS"
-   Alternatively, you can run:
+2. **Lancer l'application**
    ```bash
-   npx eas build --platform ios --profile preview
+   npm start
    ```
-   - Generates a development build optimized for testing
-   - Includes debugging tools and development features
-   - Creates smaller build size compared to production builds
 
-   Required steps:
-   - Create iOS bundle identifier (e.g., `io.mattpalmer.my-first-expo-app`)
-   - Accept warning about iOS encryption
-   - Log in to Apple Developer account
-   - Create or reuse distribution certificate
-   - Create or reuse device profile
+3. **Ouvrir dans Expo Go**
+   - Scannez le QR code avec l'app Expo Go (iOS/Android)
+   - Ou appuyez sur `w` pour ouvrir dans le navigateur
 
-### Build Process
+## 📦 Scripts disponibles
 
-6. **Handle Initial Build**
-   - Note: First build may fail with GraphQL error
-   - Solution: Simply re-run the build command
-   - This is a common first-time issue during EAS service initialization
+- `npm start` - Démarre le serveur de développement
+- `npm run android` - Lance sur Android
+- `npm run ios` - Lance sur iOS
+- `npm run web` - Lance sur le web
+- `npm test` - Lance les tests
+- `npm run lint` - Vérifie le code
 
-7. **Wait for Build Completion**
-   - Expected duration: 10-15 minutes
-   - System will display progress updates
+## 🎯 Fonctionnalités à venir
 
-8. **Access Build Results**
-   - QR code will display when build is ready
-   - Scan with iPhone camera
-   - Installation process begins automatically
+- [ ] Intégration avec des APIs de lieux réels (Google Places, Foursquare, etc.)
+- [ ] Géolocalisation en temps réel
+- [ ] Itinéraires et navigation
+- [ ] Avis et notes des utilisateurs
+- [ ] Partage de lieux
+- [ ] Mode hors-ligne
+- [ ] Filtres avancés
+- [ ] Notifications de proximité
 
-### Device Setup
+## 🔧 Configuration
 
-9. **Configure Test Device**
-   Required steps:
-   - Install device profile
-   - Enable Developer mode:
-     1. Open iOS Settings
-     2. Navigate to General → Security
-     3. Enable Developer Mode
-   - Restart device
-   Note: These steps are required for installing development builds
-   For detailed instructions, visit: [Expo Documentation](https://docs.expo.dev/tutorial/eas/internal-distribution-builds/)
+### Permissions
 
-### Final Installation
+L'application nécessite les permissions suivantes :
+- **Location** - Pour afficher votre position sur la carte
+- **Internet** - Pour charger les données des lieux
 
-10. **Install and Run**
-    - Scan QR code with iPhone camera
-    - Follow installation prompts
-    - Install the app
-    - Launch and test the app
+### Variables d'environnement
 
-## Next Steps
+Pour utiliser des services tiers, créez un fichier `.env` :
 
-- Configure production builds for App Store submission
-- Set up development builds for testing
+```env
+GOOGLE_MAPS_API_KEY=votre_clé_api
+```
 
-## Get a fresh project
+## 📱 Déploiement
 
-If you'd like to reset your project, run:
+### Build iOS
 
 ```bash
-npm run reset-project
+npx eas build --platform ios
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Build Android
 
-## Learn more
+```bash
+npx eas build --platform android
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+Pour plus de détails, consultez la [documentation Expo](https://docs.expo.dev/build/introduction/).
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## 🤝 Contribution
 
-## Join the community
+Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou une pull request.
 
-Join our community of developers creating universal apps.
+## 📄 Licence
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+MIT
+
+## 🙏 Remerciements
+
+- Expo pour le framework
+- Icônes par Ionicons
+- Cartes par react-native-maps
