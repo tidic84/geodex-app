@@ -31,22 +31,22 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Carte',
-          tabBarIcon: ({ color }) => <Ionicons name="map" size={24} color={color} />,
+          title: 'Ouvrir',
+          tabBarIcon: ({ color }) => <Ionicons name="hammer" size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Découvrir',
-          tabBarIcon: ({ color }) => <Ionicons name="compass" size={24} color={color} />,
+          title: 'Collection',
+          tabBarIcon: ({ color }) => <Ionicons name="albums" size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="favorites"
         options={{
-          title: 'Favoris',
-          tabBarIcon: ({ color }) => <Ionicons name="heart" size={24} color={color} />,
+          title: 'Boutique',
+          tabBarIcon: ({ color }) => <Ionicons name="storefront" size={24} color={color} />,
         }}
       />
       <Tabs.Screen

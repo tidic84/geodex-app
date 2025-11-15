@@ -1,148 +1,209 @@
-import React, { useState, useRef } from 'react';
-import { StyleSheet, View, Text, Pressable, Platform } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import React, { useState } from 'react';
+import { StyleSheet, View, Text, Pressable, ScrollView, Modal, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { Card } from '@/components/Card';
+import { GemCard } from '@/components/GemCard';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { useFavorites } from '@/hooks/useFavorites';
-import { MOCK_LOCATIONS } from '@/services/locationService';
-import { Location } from '@/components/LocationCard';
+import { useInventory } from '@/hooks/useInventory';
+import { GEODE_TYPES, getGemsFromGeode, Gem } from '@/services/gemService';
 
-export default function MapScreen() {
-  const mapRef = useRef<MapView>(null);
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
-  const { isFavorite, toggleFavorite } = useFavorites();
+export default function HomeScreen() {
+  const [selectedGeodeId, setSelectedGeodeId] = useState<string | null>(null);
+  const [openedGems, setOpenedGems] = useState<Gem[]>([]);
+  const [showRewardModal, setShowRewardModal] = useState(false);
+  const [scaleAnim] = useState(new Animated.Value(1));
 
-  const backgroundColor = useThemeColor({}, 'background');
+  const { coins, spendCoins, addGems } = useInventory();
   const textColor = useThemeColor({}, 'text');
   const textSecondaryColor = useThemeColor({}, 'textSecondary');
   const primaryColor = useThemeColor({}, 'primary');
+  const backgroundColor = useThemeColor({}, 'background');
 
-  const initialRegion = {
-    latitude: 48.8566,
-    longitude: 2.3522,
-    latitudeDelta: 0.05,
-    longitudeDelta: 0.05,
+  const selectedGeode = selectedGeodeId
+    ? GEODE_TYPES.find((g) => g.id === selectedGeodeId)
+    : null;
+
+  const handleGeodePress = (geodeId: string) => {
+    setSelectedGeodeId(geodeId);
   };
 
-  const handleMarkerPress = (location: Location) => {
-    setSelectedLocation(location);
-    mapRef.current?.animateToRegion({
-      latitude: location.coordinates.latitude,
-      longitude: location.coordinates.longitude,
-      latitudeDelta: 0.01,
-      longitudeDelta: 0.01,
-    });
+  const handleOpenGeode = () => {
+    if (!selectedGeode) return;
+
+    if (spendCoins(selectedGeode.cost)) {
+      // Animation de clic
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 0.9,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1.1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Obtenir les pierres
+      const gems = getGemsFromGeode(selectedGeode);
+      setOpenedGems(gems);
+      addGems(gems);
+
+      // Afficher les récompenses après un délai
+      setTimeout(() => {
+        setShowRewardModal(true);
+      }, 400);
+    }
   };
 
-  const handleRecenterPress = () => {
-    mapRef.current?.animateToRegion(initialRegion);
+  const handleCloseModal = () => {
+    setShowRewardModal(false);
+    setOpenedGems([]);
+    setSelectedGeodeId(null);
   };
 
   return (
-    <View style={styles.container}>
-      <MapView
-        ref={mapRef}
-        style={styles.map}
-        initialRegion={initialRegion}
-        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-        showsUserLocation
-        showsMyLocationButton={false}
-      >
-        {MOCK_LOCATIONS.map((location) => (
-          <Marker
-            key={location.id}
-            coordinate={location.coordinates}
-            onPress={() => handleMarkerPress(location)}
-          >
-            <View style={[styles.marker, { backgroundColor: primaryColor }]}>
-              <Ionicons name="location" size={20} color="#FFFFFF" />
-            </View>
-          </Marker>
-        ))}
-      </MapView>
-
+    <ThemedView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <ThemedView style={styles.headerContent}>
+        <View>
           <ThemedText type="title" style={styles.title}>
-            GeoDex
+            Ouvrir une Géode
           </ThemedText>
-          <ThemedText style={styles.subtitle}>
-            Découvrez les lieux autour de vous
+          <ThemedText style={[styles.subtitle, { color: textSecondaryColor }]}>
+            Choisissez une géode à ouvrir
           </ThemedText>
-        </ThemedView>
+        </View>
+        <View style={[styles.coinsBadge, { backgroundColor: `${primaryColor}15` }]}>
+          <Ionicons name="cash" size={20} color="#F59E0B" />
+          <Text style={[styles.coinsText, { color: textColor }]}>{coins}</Text>
+        </View>
       </View>
 
-      <Pressable
-        style={[styles.recenterButton, { backgroundColor: primaryColor }]}
-        onPress={handleRecenterPress}
-      >
-        <Ionicons name="locate" size={24} color="#FFFFFF" />
-      </Pressable>
-
-      {selectedLocation && (
-        <View style={styles.cardContainer}>
-          <Card style={styles.locationCard}>
-            <View style={styles.cardHeader}>
-              <View style={styles.cardInfo}>
-                <Text style={[styles.locationName, { color: textColor }]}>
-                  {selectedLocation.name}
-                </Text>
-                <Text style={[styles.locationCategory, { color: textSecondaryColor }]}>
-                  {selectedLocation.category}
-                </Text>
-              </View>
-
-              <Pressable
-                onPress={() => toggleFavorite(selectedLocation.id)}
-                hitSlop={8}
-              >
-                <Ionicons
-                  name={isFavorite(selectedLocation.id) ? 'heart' : 'heart-outline'}
-                  size={28}
-                  color={isFavorite(selectedLocation.id) ? '#EF4444' : textSecondaryColor}
-                />
-              </Pressable>
+      {/* Selected Geode Display */}
+      {selectedGeode && (
+        <View style={styles.selectedContainer}>
+          <Animated.View style={[styles.geodeDisplay, { transform: [{ scale: scaleAnim }] }]}>
+            <View style={[styles.bigGeode, { backgroundColor: selectedGeode.color }]}>
+              <Text style={styles.bigGeodeEmoji}>🪨</Text>
             </View>
+          </Animated.View>
 
-            <View style={styles.cardDetails}>
-              <View style={styles.detailRow}>
-                <Ionicons name="location-outline" size={16} color={textSecondaryColor} />
-                <Text style={[styles.detailText, { color: textSecondaryColor }]} numberOfLines={2}>
-                  {selectedLocation.address}
-                </Text>
-              </View>
+          <ThemedText style={styles.selectedName}>{selectedGeode.name}</ThemedText>
+          <Text style={[styles.selectedInfo, { color: textSecondaryColor }]}>
+            {selectedGeode.minGems}-{selectedGeode.maxGems} pierres précieuses
+          </Text>
 
-              {selectedLocation.distance !== undefined && (
-                <View style={styles.detailRow}>
-                  <Ionicons name="navigate-outline" size={16} color={textSecondaryColor} />
-                  <Text style={[styles.detailText, { color: textSecondaryColor }]}>
-                    {selectedLocation.distance < 1
-                      ? `${Math.round(selectedLocation.distance * 1000)}m`
-                      : `${selectedLocation.distance.toFixed(1)}km`}
-                  </Text>
-                </View>
-              )}
-
-              {selectedLocation.rating !== undefined && (
-                <View style={styles.detailRow}>
-                  <Ionicons name="star" size={16} color="#F59E0B" />
-                  <Text style={[styles.detailText, { color: textColor }]}>
-                    {selectedLocation.rating.toFixed(1)} / 5
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            <Pressable onPress={() => setSelectedLocation(null)} style={styles.closeButton}>
-              <Ionicons name="close" size={20} color={textSecondaryColor} />
-            </Pressable>
-          </Card>
+          <Pressable
+            style={[
+              styles.openButton,
+              {
+                backgroundColor:
+                  coins >= selectedGeode.cost ? primaryColor : textSecondaryColor,
+              },
+            ]}
+            onPress={handleOpenGeode}
+            disabled={coins < selectedGeode.cost}
+          >
+            <Ionicons name="hammer" size={20} color="#FFFFFF" />
+            <Text style={styles.openButtonText}>
+              {coins >= selectedGeode.cost
+                ? `Ouvrir (${selectedGeode.cost})`
+                : 'Pas assez de pièces'}
+            </Text>
+          </Pressable>
         </View>
       )}
-    </View>
+
+      {/* Geode List */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.geodeList}
+        showsVerticalScrollIndicator={false}
+      >
+        <ThemedText style={styles.sectionTitle}>Géodes disponibles</ThemedText>
+        {GEODE_TYPES.map((geode) => (
+          <Pressable
+            key={geode.id}
+            onPress={() => handleGeodePress(geode.id)}
+            style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+          >
+            <Card
+              style={[
+                styles.geodeCard,
+                selectedGeodeId === geode.id && {
+                  borderWidth: 2,
+                  borderColor: primaryColor,
+                },
+              ]}
+            >
+              <View style={[styles.geodeIcon, { backgroundColor: geode.color }]}>
+                <Text style={styles.geodeEmoji}>🪨</Text>
+              </View>
+              <View style={styles.geodeInfo}>
+                <Text style={[styles.geodeName, { color: textColor }]}>{geode.name}</Text>
+                <Text style={[styles.geodeDetails, { color: textSecondaryColor }]}>
+                  {geode.minGems}-{geode.maxGems} pierres
+                </Text>
+                <View style={styles.costRow}>
+                  <Ionicons
+                    name="cash"
+                    size={14}
+                    color={coins >= geode.cost ? '#F59E0B' : '#EF4444'}
+                  />
+                  <Text
+                    style={[
+                      styles.geodeCost,
+                      { color: coins >= geode.cost ? textColor : '#EF4444' },
+                    ]}
+                  >
+                    {geode.cost}
+                  </Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={textSecondaryColor} />
+            </Card>
+          </Pressable>
+        ))}
+      </ScrollView>
+
+      {/* Reward Modal */}
+      <Modal
+        visible={showRewardModal}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCloseModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>🎉 Félicitations !</Text>
+              <Text style={[styles.modalSubtitle, { color: textSecondaryColor }]}>
+                Vous avez obtenu {openedGems.length} pierre{openedGems.length > 1 ? 's' : ''} !
+              </Text>
+            </View>
+
+            <ScrollView style={styles.gemsScroll}>
+              {openedGems.map((gem, index) => (
+                <GemCard key={`${gem.id}-${index}`} gem={gem} showValue={false} />
+              ))}
+            </ScrollView>
+
+            <Pressable style={[styles.closeButton, { backgroundColor: primaryColor }]} onPress={handleCloseModal}>
+              <Text style={styles.closeButtonText}>Fermer</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+    </ThemedView>
   );
 }
 
@@ -150,25 +211,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  map: {
-    flex: 1,
-  },
   header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    paddingTop: 60,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 20,
-  },
-  headerContent: {
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    paddingTop: 60,
+    paddingBottom: 16,
   },
   title: {
     fontSize: 28,
@@ -178,25 +227,30 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
   },
-  marker: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  coinsBadge: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
   },
-  recenterButton: {
-    position: 'absolute',
-    bottom: 120,
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  coinsText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  selectedContainer: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+  },
+  geodeDisplay: {
+    marginBottom: 16,
+  },
+  bigGeode: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -205,49 +259,117 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  cardContainer: {
-    position: 'absolute',
-    bottom: 100,
-    left: 20,
-    right: 20,
+  bigGeodeEmoji: {
+    fontSize: 64,
   },
-  locationCard: {
-    padding: 16,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  cardInfo: {
-    flex: 1,
-    marginRight: 12,
-  },
-  locationName: {
-    fontSize: 18,
-    fontWeight: '600',
+  selectedName: {
+    fontSize: 24,
+    fontWeight: '700',
     marginBottom: 4,
   },
-  locationCategory: {
+  selectedInfo: {
     fontSize: 14,
+    marginBottom: 16,
   },
-  cardDetails: {
-    gap: 8,
-  },
-  detailRow: {
+  openButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
   },
-  detailText: {
-    fontSize: 14,
+  openButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  scrollView: {
     flex: 1,
   },
+  geodeList: {
+    paddingHorizontal: 20,
+    paddingBottom: 100,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  geodeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    marginBottom: 12,
+  },
+  geodeIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  geodeEmoji: {
+    fontSize: 28,
+  },
+  geodeInfo: {
+    flex: 1,
+  },
+  geodeName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  geodeDetails: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  costRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  geodeCost: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '85%',
+    maxHeight: '70%',
+    borderRadius: 20,
+    padding: 24,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+  },
+  gemsScroll: {
+    maxHeight: 300,
+    marginBottom: 20,
+  },
   closeButton: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    padding: 4,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

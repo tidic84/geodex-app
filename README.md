@@ -1,58 +1,52 @@
-# GeoDex 🗺️
+# GeoDex 🪨💎
 
-Une application mobile moderne de découverte de lieux d'intérêt géographiques, construite avec Expo et React Native.
+Un jeu mobile de collection de pierres précieuses ! Ouvrez des géodes pour découvrir des gemmes rares et complétez votre collection.
+
+## 🎮 Concept du jeu
+
+GeoDex est un jeu d'ouverture de géodes où vous collectionnez des pierres précieuses. Achetez des géodes, ouvrez-les pour découvrir des gemmes de différentes raretés, et complétez votre collection !
+
+### Comment jouer
+
+1. **Ouvrir** - Choisissez une géode et cliquez sur le marteau pour l'ouvrir
+2. **Collectionner** - Découvrez des pierres précieuses de différentes raretés
+3. **Vendre** - Vendez vos doublons pour obtenir des pièces
+4. **Acheter** - Utilisez vos pièces pour acheter de nouvelles géodes
+
+## 🪨 Types de Géodes
+
+- **Géode Commune** (50 pièces) - 1-3 pierres communes/uncommon
+- **Géode Rare** (200 pièces) - 2-4 pierres communes/uncommon/rare
+- **Géode Précieuse** (500 pièces) - 3-5 pierres uncommon/rare/epic
+- **Géode Épique** (1500 pièces) - 4-6 pierres rare/epic/legendary
+- **Géode Légendaire** (5000 pièces) - 5-8 pierres epic/legendary
+
+## 💎 Raretés des Pierres
+
+- **Common** (gris) - Quartz, Calcite
+- **Uncommon** (vert) - Améthyste, Citrine, Aigue-marine
+- **Rare** (bleu) - Topaze, Émeraude, Saphir
+- **Epic** (violet) - Rubis, Alexandrite
+- **Legendary** (orange) - Diamant, Opale Noire
 
 ## 📱 Fonctionnalités
 
-- **Carte Interactive** - Explorez les lieux sur une carte en temps réel avec des marqueurs personnalisés
-- **Découverte** - Parcourez et recherchez des lieux par catégorie avec filtres intelligents
-- **Favoris** - Sauvegardez vos lieux préférés pour un accès rapide
-- **Profil** - Suivez vos statistiques d'exploration et gérez vos paramètres
-- **Mode Sombre** - Interface adaptative qui s'ajuste automatiquement à vos préférences système
-- **Design Moderne** - Interface utilisateur épurée avec des composants cohérents et des icônes Ionicons
-
-## 🏗️ Architecture
-
-L'application est construite avec une architecture moderne et modulaire :
-
-```
-geodex-app/
-├── app/                        # Routing (Expo Router)
-│   ├── (tabs)/                # Écrans avec navigation par onglets
-│   │   ├── index.tsx          # Écran Carte
-│   │   ├── explore.tsx        # Écran Découvrir
-│   │   ├── favorites.tsx      # Écran Favoris
-│   │   └── profile.tsx        # Écran Profil
-│   ├── _layout.tsx            # Layout racine
-│   └── +not-found.tsx         # Page 404
-├── components/                 # Composants réutilisables
-│   ├── Button.tsx             # Bouton personnalisé
-│   ├── Card.tsx               # Carte UI
-│   ├── LocationCard.tsx       # Carte de lieu
-│   ├── SearchBar.tsx          # Barre de recherche
-│   ├── ThemedText.tsx         # Texte avec thème
-│   └── ThemedView.tsx         # Vue avec thème
-├── constants/                  # Constantes
-│   └── Colors.ts              # Palette de couleurs
-├── hooks/                      # Hooks personnalisés
-│   ├── useFavorites.ts        # Gestion des favoris
-│   ├── useColorScheme.ts      # Détection du thème
-│   └── useThemeColor.ts       # Couleurs du thème
-└── services/                   # Services métier
-    └── locationService.ts     # Logique de gestion des lieux
-```
+- **Écran Ouvrir** 🔨 - Ouvrez des géodes et découvrez des pierres précieuses
+- **Écran Collection** 📚 - Consultez toutes les pierres que vous avez découvertes
+- **Écran Boutique** 🏪 - Achetez de nouvelles géodes avec vos pièces
+- **Écran Profil** 👤 - Suivez vos statistiques et succès
+- **Mode Sombre** 🌙 - Interface adaptative
+- **Persistance** 💾 - Votre progression est sauvegardée localement
 
 ## 🎨 Technologies
 
 - **Expo SDK 52** - Framework React Native
 - **TypeScript** - Typage statique
-- **React Native Maps** - Cartes interactives
-- **AsyncStorage** - Persistance locale
-- **Expo Location** - Géolocalisation
+- **AsyncStorage** - Sauvegarde locale
+- **React Native Reanimated** - Animations fluides
 - **Ionicons** - Icônes modernes
-- **Expo Router** - Navigation basée sur les fichiers
 
-## 🚀 Démarrage
+## 🚀 Installation
 
 1. **Installer les dépendances**
    ```bash
@@ -65,7 +59,7 @@ geodex-app/
    ```
 
 3. **Ouvrir dans Expo Go**
-   - Scannez le QR code avec l'app Expo Go (iOS/Android)
+   - Scannez le QR code avec Expo Go (iOS/Android)
    - Ou appuyez sur `w` pour ouvrir dans le navigateur
 
 ## 📦 Scripts disponibles
@@ -75,61 +69,64 @@ geodex-app/
 - `npm run ios` - Lance sur iOS
 - `npm run web` - Lance sur le web
 - `npm test` - Lance les tests
-- `npm run lint` - Vérifie le code
 
-## 🎯 Fonctionnalités à venir
+## 🎯 Architecture
 
-- [ ] Intégration avec des APIs de lieux réels (Google Places, Foursquare, etc.)
-- [ ] Géolocalisation en temps réel
-- [ ] Itinéraires et navigation
-- [ ] Avis et notes des utilisateurs
-- [ ] Partage de lieux
-- [ ] Mode hors-ligne
-- [ ] Filtres avancés
-- [ ] Notifications de proximité
-
-## 🔧 Configuration
-
-### Permissions
-
-L'application nécessite les permissions suivantes :
-- **Location** - Pour afficher votre position sur la carte
-- **Internet** - Pour charger les données des lieux
-
-### Variables d'environnement
-
-Pour utiliser des services tiers, créez un fichier `.env` :
-
-```env
-GOOGLE_MAPS_API_KEY=votre_clé_api
+```
+geodex-app/
+├── app/                        # Routes (Expo Router)
+│   ├── (tabs)/                # Écrans avec navigation
+│   │   ├── index.tsx          # Ouvrir des géodes
+│   │   ├── explore.tsx        # Collection
+│   │   ├── favorites.tsx      # Boutique
+│   │   └── profile.tsx        # Profil & Stats
+│   └── _layout.tsx            # Layout racine
+├── components/                 # Composants UI
+│   ├── Card.tsx               # Carte UI réutilisable
+│   ├── GemCard.tsx            # Carte de pierre précieuse
+│   ├── GeodeCard.tsx          # Carte de géode
+│   └── ...
+├── hooks/                      # Hooks personnalisés
+│   └── useInventory.ts        # Gestion inventaire & pièces
+├── services/                   # Logique métier
+│   └── gemService.ts          # Système de géodes et gemmes
+└── constants/                  # Constantes
+    └── Colors.ts              # Palette de couleurs
 ```
 
-## 📱 Déploiement
+## 🏆 Succès
 
-### Build iOS
+- **Première Pierre** - Ouvrir votre première géode
+- **Collectionneur** - Collecter 10 pierres différentes
+- **Expert** - Compléter 100% de la collection (12 pierres uniques)
 
-```bash
-npx eas build --platform ios
-```
+## 🎲 Probabilités
 
-### Build Android
+Le système utilise des poids de rareté pour déterminer les drops :
+- Common: 50%
+- Uncommon: 30%
+- Rare: 15%
+- Epic: 4%
+- Legendary: 1%
 
-```bash
-npx eas build --platform android
-```
+Les probabilités sont ajustées selon le type de géode ouvert.
 
-Pour plus de détails, consultez la [documentation Expo](https://docs.expo.dev/build/introduction/).
+## 🔮 Fonctionnalités futures
 
-## 🤝 Contribution
-
-Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou une pull request.
+- [ ] Système de quêtes quotidiennes
+- [ ] Récompenses journalières
+- [ ] Échanges entre joueurs
+- [ ] Événements saisonniers
+- [ ] Nouvelles géodes et pierres
+- [ ] Achievements supplémentaires
+- [ ] Mode multijoueur
 
 ## 📄 Licence
 
 MIT
 
-## 🙏 Remerciements
+## 🙏 Crédits
 
-- Expo pour le framework
-- Icônes par Ionicons
-- Cartes par react-native-maps
+- Framework: Expo
+- Icônes: Ionicons
+- Inspiration: Jeux de gacha et collection

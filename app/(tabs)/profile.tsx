@@ -1,68 +1,57 @@
 import React from 'react';
-import { StyleSheet, ScrollView, View, Pressable } from 'react-native';
+import { StyleSheet, ScrollView, View, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { Card } from '@/components/Card';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { useFavorites } from '@/hooks/useFavorites';
+import { useInventory } from '@/hooks/useInventory';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { MOCK_LOCATIONS } from '@/services/locationService';
-
-type SettingItemProps = {
-  icon: keyof typeof Ionicons.glyphMap;
-  title: string;
-  subtitle?: string;
-  onPress?: () => void;
-  showChevron?: boolean;
-};
-
-function SettingItem({ icon, title, subtitle, onPress, showChevron = true }: SettingItemProps) {
-  const textColor = useThemeColor({}, 'text');
-  const textSecondaryColor = useThemeColor({}, 'textSecondary');
-  const iconColor = useThemeColor({}, 'icon');
-  const primaryColor = useThemeColor({}, 'primary');
-
-  const content = (
-    <View style={styles.settingItem}>
-      <View style={[styles.settingIcon, { backgroundColor: `${primaryColor}15` }]}>
-        <Ionicons name={icon} size={22} color={primaryColor} />
-      </View>
-      <View style={styles.settingContent}>
-        <ThemedText style={[styles.settingTitle, { color: textColor }]}>
-          {title}
-        </ThemedText>
-        {subtitle && (
-          <ThemedText style={[styles.settingSubtitle, { color: textSecondaryColor }]}>
-            {subtitle}
-          </ThemedText>
-        )}
-      </View>
-      {showChevron && (
-        <Ionicons name="chevron-forward" size={20} color={iconColor} />
-      )}
-    </View>
-  );
-
-  if (onPress) {
-    return (
-      <Pressable onPress={onPress}>
-        {content}
-      </Pressable>
-    );
-  }
-
-  return content;
-}
+import { GEMS } from '@/services/gemService';
 
 export default function ProfileScreen() {
-  const { favorites } = useFavorites();
+  const { inventory, coins, getTotalValue, getTotalGems, getUniqueGems } = useInventory();
   const colorScheme = useColorScheme();
   const textColor = useThemeColor({}, 'text');
   const textSecondaryColor = useThemeColor({}, 'textSecondary');
   const primaryColor = useThemeColor({}, 'primary');
 
-  const visitedCount = Math.floor(MOCK_LOCATIONS.length * 0.6);
+  const collectionProgress = Math.round((getUniqueGems() / GEMS.length) * 100);
+
+  const stats = [
+    {
+      icon: 'diamond' as const,
+      label: 'Pierres totales',
+      value: getTotalGems(),
+      color: '#2563EB',
+    },
+    {
+      icon: 'albums' as const,
+      label: 'Uniques',
+      value: `${getUniqueGems()}/${GEMS.length}`,
+      color: '#8B5CF6',
+    },
+    {
+      icon: 'cash' as const,
+      label: 'Pièces',
+      value: coins,
+      color: '#F59E0B',
+    },
+    {
+      icon: 'trending-up' as const,
+      label: 'Valeur totale',
+      value: getTotalValue(),
+      color: '#10B981',
+    },
+  ];
+
+  const handleResetProgress = () => {
+    Alert.alert(
+      'Réinitialiser',
+      'Cette fonctionnalité permet de réinitialiser votre progression. Elle sera disponible prochainement!',
+      [{ text: 'OK' }]
+    );
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -71,109 +60,131 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        {/* Header */}
         <View style={styles.header}>
           <View style={[styles.avatar, { backgroundColor: primaryColor }]}>
             <Ionicons name="person" size={40} color="#FFFFFF" />
           </View>
           <ThemedText type="title" style={styles.name}>
-            Explorateur
+            Collectionneur
           </ThemedText>
-          <ThemedText style={[styles.email, { color: textSecondaryColor }]}>
-            explorateur@geodex.app
+          <ThemedText style={[styles.username, { color: textSecondaryColor }]}>
+            @geodex_master
           </ThemedText>
         </View>
 
-        <View style={styles.statsContainer}>
-          <Card style={styles.statCard}>
-            <View style={styles.statContent}>
-              <Ionicons name="map" size={24} color={primaryColor} />
+        {/* Stats Grid */}
+        <View style={styles.statsGrid}>
+          {stats.map((stat, index) => (
+            <Card key={index} style={styles.statCard}>
+              <View style={[styles.statIcon, { backgroundColor: `${stat.color}15` }]}>
+                <Ionicons name={stat.icon} size={24} color={stat.color} />
+              </View>
               <ThemedText style={[styles.statValue, { color: textColor }]}>
-                {visitedCount}
+                {stat.value}
               </ThemedText>
               <ThemedText style={[styles.statLabel, { color: textSecondaryColor }]}>
-                Visités
+                {stat.label}
               </ThemedText>
-            </View>
-          </Card>
+            </Card>
+          ))}
+        </View>
 
-          <Card style={styles.statCard}>
-            <View style={styles.statContent}>
-              <Ionicons name="heart" size={24} color="#EF4444" />
-              <ThemedText style={[styles.statValue, { color: textColor }]}>
-                {favorites.size}
+        {/* Collection Progress */}
+        <View style={styles.section}>
+          <ThemedText style={styles.sectionTitle}>Progression de collection</ThemedText>
+          <Card style={styles.progressCard}>
+            <View style={styles.progressHeader}>
+              <ThemedText style={styles.progressTitle}>
+                {collectionProgress}% complété
               </ThemedText>
-              <ThemedText style={[styles.statLabel, { color: textSecondaryColor }]}>
-                Favoris
-              </ThemedText>
-            </View>
-          </Card>
-
-          <Card style={styles.statCard}>
-            <View style={styles.statContent}>
               <Ionicons name="trophy" size={24} color="#F59E0B" />
-              <ThemedText style={[styles.statValue, { color: textColor }]}>
-                {Math.floor(visitedCount / 5)}
-              </ThemedText>
-              <ThemedText style={[styles.statLabel, { color: textSecondaryColor }]}>
-                Badges
-              </ThemedText>
             </View>
+            <View style={[styles.progressBarContainer, { backgroundColor: textSecondaryColor + '20' }]}>
+              <View
+                style={[
+                  styles.progressBarFill,
+                  {
+                    backgroundColor: primaryColor,
+                    width: `${collectionProgress}%`,
+                  },
+                ]}
+              />
+            </View>
+            <ThemedText style={[styles.progressText, { color: textSecondaryColor }]}>
+              {getUniqueGems()} sur {GEMS.length} pierres découvertes
+            </ThemedText>
           </Card>
         </View>
 
+        {/* Achievements */}
+        <View style={styles.section}>
+          <ThemedText style={styles.sectionTitle}>Succès</ThemedText>
+          <Card style={styles.achievementCard}>
+            <View style={[styles.achievementIcon, { backgroundColor: '#F59E0B20' }]}>
+              <Ionicons name="ribbon" size={28} color="#F59E0B" />
+            </View>
+            <View style={styles.achievementContent}>
+              <ThemedText style={styles.achievementTitle}>Première Pierre</ThemedText>
+              <ThemedText style={[styles.achievementDesc, { color: textSecondaryColor }]}>
+                Ouvrir votre première géode
+              </ThemedText>
+            </View>
+            <Ionicons
+              name={getTotalGems() > 0 ? 'checkmark-circle' : 'lock-closed'}
+              size={24}
+              color={getTotalGems() > 0 ? '#10B981' : textSecondaryColor}
+            />
+          </Card>
+
+          <Card style={styles.achievementCard}>
+            <View style={[styles.achievementIcon, { backgroundColor: '#2563EB20' }]}>
+              <Ionicons name="diamond" size={28} color="#2563EB" />
+            </View>
+            <View style={styles.achievementContent}>
+              <ThemedText style={styles.achievementTitle}>Collectionneur</ThemedText>
+              <ThemedText style={[styles.achievementDesc, { color: textSecondaryColor }]}>
+                Collecter 10 pierres différentes
+              </ThemedText>
+            </View>
+            <Ionicons
+              name={getUniqueGems() >= 10 ? 'checkmark-circle' : 'lock-closed'}
+              size={24}
+              color={getUniqueGems() >= 10 ? '#10B981' : textSecondaryColor}
+            />
+          </Card>
+
+          <Card style={styles.achievementCard}>
+            <View style={[styles.achievementIcon, { backgroundColor: '#8B5CF620' }]}>
+              <Ionicons name="sparkles" size={28} color="#8B5CF6" />
+            </View>
+            <View style={styles.achievementContent}>
+              <ThemedText style={styles.achievementTitle}>Expert</ThemedText>
+              <ThemedText style={[styles.achievementDesc, { color: textSecondaryColor }]}>
+                Compléter 100% de la collection
+              </ThemedText>
+            </View>
+            <Ionicons
+              name={collectionProgress === 100 ? 'checkmark-circle' : 'lock-closed'}
+              size={24}
+              color={collectionProgress === 100 ? '#10B981' : textSecondaryColor}
+            />
+          </Card>
+        </View>
+
+        {/* Settings */}
         <View style={styles.section}>
           <ThemedText style={styles.sectionTitle}>Paramètres</ThemedText>
           <Card>
-            <SettingItem
-              icon="notifications-outline"
-              title="Notifications"
-              subtitle="Gérer vos notifications"
-            />
-            <View style={styles.divider} />
-            <SettingItem
-              icon="location-outline"
-              title="Localisation"
-              subtitle="Toujours activée"
-            />
-            <View style={styles.divider} />
-            <SettingItem
-              icon={colorScheme === 'dark' ? 'moon' : 'sunny'}
-              title="Apparence"
-              subtitle={colorScheme === 'dark' ? 'Mode sombre' : 'Mode clair'}
-            />
-          </Card>
-        </View>
-
-        <View style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>À propos</ThemedText>
-          <Card>
-            <SettingItem
-              icon="information-circle-outline"
-              title="Version"
-              subtitle="1.0.0"
-              showChevron={false}
-            />
-            <View style={styles.divider} />
-            <SettingItem
-              icon="document-text-outline"
-              title="Conditions d'utilisation"
-            />
-            <View style={styles.divider} />
-            <SettingItem
-              icon="shield-checkmark-outline"
-              title="Politique de confidentialité"
-            />
-          </Card>
-        </View>
-
-        <View style={styles.section}>
-          <Card>
-            <Pressable style={styles.logoutButton}>
-              <Ionicons name="log-out-outline" size={22} color="#EF4444" />
-              <ThemedText style={styles.logoutText}>
-                Se déconnecter
+            <View style={styles.settingRow}>
+              <View style={styles.settingLeft}>
+                <Ionicons name={colorScheme === 'dark' ? 'moon' : 'sunny'} size={20} color={primaryColor} />
+                <ThemedText style={styles.settingText}>Thème</ThemedText>
+              </View>
+              <ThemedText style={[styles.settingValue, { color: textSecondaryColor }]}>
+                {colorScheme === 'dark' ? 'Sombre' : 'Clair'}
               </ThemedText>
-            </Pressable>
+            </View>
           </Card>
         </View>
       </ScrollView>
@@ -210,79 +221,113 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 4,
   },
-  email: {
+  username: {
     fontSize: 14,
   },
-  statsContainer: {
+  statsGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     paddingHorizontal: 20,
     gap: 12,
-    marginBottom: 32,
+    marginBottom: 24,
   },
   statCard: {
-    flex: 1,
+    width: '48%',
     padding: 16,
-  },
-  statContent: {
     alignItems: 'center',
-    gap: 8,
+  },
+  statIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   statValue: {
     fontSize: 24,
     fontWeight: 'bold',
+    marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
+    textAlign: 'center',
   },
   section: {
     paddingHorizontal: 20,
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     marginBottom: 12,
   },
-  settingItem: {
+  progressCard: {
+    padding: 16,
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  progressTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  progressBarContainer: {
+    height: 12,
+    borderRadius: 6,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 6,
+  },
+  progressText: {
+    fontSize: 13,
+  },
+  achievementCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    padding: 16,
+    marginBottom: 12,
   },
-  settingIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+  achievementIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
-  settingContent: {
+  achievementContent: {
     flex: 1,
   },
-  settingTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  settingSubtitle: {
-    fontSize: 13,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#E5E7EB',
-    opacity: 0.3,
-    marginLeft: 52,
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    gap: 8,
-  },
-  logoutText: {
+  achievementTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#EF4444',
+    marginBottom: 2,
+  },
+  achievementDesc: {
+    fontSize: 13,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+  },
+  settingLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  settingText: {
+    fontSize: 16,
+  },
+  settingValue: {
+    fontSize: 14,
   },
 });

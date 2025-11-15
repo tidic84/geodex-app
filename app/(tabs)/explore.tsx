@@ -1,119 +1,152 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { StyleSheet, ScrollView, View, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
-import { SearchBar } from '@/components/SearchBar';
-import { LocationCard, Location } from '@/components/LocationCard';
+import { GemCard } from '@/components/GemCard';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { useFavorites } from '@/hooks/useFavorites';
-import {
-  MOCK_LOCATIONS,
-  CATEGORIES,
-  filterLocationsByCategory,
-  searchLocations,
-  sortLocationsByDistance,
-} from '@/services/locationService';
+import { useInventory } from '@/hooks/useInventory';
+import { GEMS, GemRarity } from '@/services/gemService';
 
-export default function ExploreScreen() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('Tous');
-  const { isFavorite, toggleFavorite } = useFavorites();
+const RARITY_FILTERS: (GemRarity | 'all')[] = ['all', 'common', 'uncommon', 'rare', 'epic', 'legendary'];
 
-  const backgroundColor = useThemeColor({}, 'background');
+export default function CollectionScreen() {
+  const [selectedRarity, setSelectedRarity] = useState<GemRarity | 'all'>('all');
+  const { inventory, sellGem } = useInventory();
+
+  const textColor = useThemeColor({}, 'text');
+  const textSecondaryColor = useThemeColor({}, 'textSecondary');
   const primaryColor = useThemeColor({}, 'primary');
   const borderColor = useThemeColor({}, 'border');
-  const textColor = useThemeColor({}, 'text');
 
-  const filteredLocations = useMemo(() => {
-    const locationsWithFavorites = MOCK_LOCATIONS.map((loc) => ({
-      ...loc,
-      isFavorite: isFavorite(loc.id),
+  const collectionStats = useMemo(() => {
+    const owned = inventory.size;
+    const total = GEMS.length;
+    const percentage = total > 0 ? Math.round((owned / total) * 100) : 0;
+
+    return { owned, total, percentage };
+  }, [inventory]);
+
+  const filteredGems = useMemo(() => {
+    let gems = GEMS;
+
+    if (selectedRarity !== 'all') {
+      gems = gems.filter((g) => g.rarity === selectedRarity);
+    }
+
+    return gems.map((gem) => ({
+      gem,
+      owned: inventory.has(gem.id),
+      quantity: inventory.get(gem.id)?.quantity || 0,
     }));
+  }, [selectedRarity, inventory]);
 
-    let locations = filterLocationsByCategory(locationsWithFavorites, selectedCategory);
-    locations = searchLocations(locations, searchQuery);
-    locations = sortLocationsByDistance(locations);
-
-    return locations;
-  }, [searchQuery, selectedCategory, isFavorite]);
+  const getRarityLabel = (rarity: GemRarity | 'all'): string => {
+    if (rarity === 'all') return 'Toutes';
+    return rarity.charAt(0).toUpperCase() + rarity.slice(1);
+  };
 
   return (
     <ThemedView style={styles.container}>
       <View style={styles.header}>
         <ThemedText type="title" style={styles.title}>
-          Découvrir
+          Ma Collection
         </ThemedText>
-        <ThemedText style={styles.subtitle}>
-          {filteredLocations.length} lieu{filteredLocations.length > 1 ? 'x' : ''} trouvé{filteredLocations.length > 1 ? 's' : ''}
-        </ThemedText>
+        <View style={styles.statsContainer}>
+          <View style={styles.statItem}>
+            <Ionicons name="albums" size={20} color={primaryColor} />
+            <ThemedText style={styles.statText}>
+              {collectionStats.owned}/{collectionStats.total}
+            </ThemedText>
+          </View>
+          <View style={[styles.progressBar, { backgroundColor: borderColor }]}>
+            <View
+              style={[
+                styles.progressFill,
+                {
+                  backgroundColor: primaryColor,
+                  width: `${collectionStats.percentage}%`,
+                },
+              ]}
+            />
+          </View>
+          <ThemedText style={[styles.percentageText, { color: textSecondaryColor }]}>
+            {collectionStats.percentage}% complété
+          </ThemedText>
+        </View>
       </View>
 
-      <View style={styles.searchContainer}>
-        <SearchBar
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder="Rechercher un lieu..."
-        />
-      </View>
-
+      {/* Rarity Filters */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.categoriesContainer}
-        contentContainerStyle={styles.categoriesContent}
+        style={styles.filtersContainer}
+        contentContainerStyle={styles.filtersContent}
       >
-        {CATEGORIES.map((category) => (
+        {RARITY_FILTERS.map((rarity) => (
           <Pressable
-            key={category}
-            onPress={() => setSelectedCategory(category)}
+            key={rarity}
+            onPress={() => setSelectedRarity(rarity)}
             style={[
-              styles.categoryChip,
+              styles.filterChip,
               {
                 backgroundColor:
-                  selectedCategory === category
-                    ? primaryColor
-                    : backgroundColor,
-                borderColor: borderColor,
+                  selectedRarity === rarity ? primaryColor : 'transparent',
+                borderColor: selectedRarity === rarity ? primaryColor : borderColor,
               },
             ]}
           >
             <ThemedText
               style={[
-                styles.categoryText,
+                styles.filterText,
                 {
-                  color:
-                    selectedCategory === category
-                      ? '#FFFFFF'
-                      : textColor,
+                  color: selectedRarity === rarity ? '#FFFFFF' : textColor,
                 },
               ]}
             >
-              {category}
+              {getRarityLabel(rarity)}
             </ThemedText>
           </Pressable>
         ))}
       </ScrollView>
 
+      {/* Gems List */}
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.locationsContainer}
+        contentContainerStyle={styles.gemsContainer}
         showsVerticalScrollIndicator={false}
       >
-        {filteredLocations.length > 0 ? (
-          filteredLocations.map((location) => (
-            <LocationCard
-              key={location.id}
-              location={location}
-              onFavoritePress={() => toggleFavorite(location.id)}
-            />
+        {filteredGems.length > 0 ? (
+          filteredGems.map(({ gem, owned, quantity }) => (
+            <View key={gem.id} style={[styles.gemWrapper, !owned && styles.notOwned]}>
+              {owned ? (
+                <GemCard
+                  gem={gem}
+                  quantity={quantity}
+                  onSell={() => sellGem(gem.id)}
+                />
+              ) : (
+                <View style={styles.lockedGem}>
+                  <View style={[styles.lockedIcon, { backgroundColor: `${textSecondaryColor}20` }]}>
+                    <Ionicons name="lock-closed" size={24} color={textSecondaryColor} />
+                  </View>
+                  <View style={styles.lockedInfo}>
+                    <ThemedText style={[styles.lockedName, { color: textSecondaryColor }]}>
+                      ???
+                    </ThemedText>
+                    <ThemedText style={[styles.lockedText, { color: textSecondaryColor }]}>
+                      Non découvert
+                    </ThemedText>
+                  </View>
+                </View>
+              )}
+            </View>
           ))
         ) : (
           <View style={styles.emptyState}>
+            <Ionicons name="diamond-outline" size={64} color={textSecondaryColor} style={styles.emptyIcon} />
             <ThemedText style={styles.emptyText}>
-              Aucun lieu trouvé
-            </ThemedText>
-            <ThemedText style={styles.emptySubtext}>
-              Essayez de modifier vos filtres
+              Aucune pierre dans cette catégorie
             </ThemedText>
           </View>
         )}
@@ -132,54 +165,102 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    opacity: 0.7,
-  },
-  searchContainer: {
-    paddingHorizontal: 20,
     marginBottom: 16,
   },
-  categoriesContainer: {
+  statsContainer: {
+    gap: 8,
+  },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  statText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  progressBar: {
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  percentageText: {
+    fontSize: 12,
+  },
+  filtersContainer: {
     marginBottom: 16,
   },
-  categoriesContent: {
+  filtersContent: {
     paddingHorizontal: 20,
     gap: 8,
   },
-  categoryChip: {
+  filterChip: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
   },
-  categoryText: {
+  filterText: {
     fontSize: 14,
     fontWeight: '500',
   },
   scrollView: {
     flex: 1,
   },
-  locationsContainer: {
+  gemsContainer: {
     paddingHorizontal: 20,
     paddingBottom: 100,
+  },
+  gemWrapper: {
+    opacity: 1,
+  },
+  notOwned: {
+    opacity: 0.5,
+  },
+  lockedGem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    marginBottom: 12,
+    borderRadius: 16,
+    backgroundColor: 'transparent',
+  },
+  lockedIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  lockedInfo: {
+    flex: 1,
+  },
+  lockedName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  lockedText: {
+    fontSize: 13,
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 60,
   },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 8,
+  emptyIcon: {
+    marginBottom: 16,
+    opacity: 0.3,
   },
-  emptySubtext: {
-    fontSize: 14,
+  emptyText: {
+    fontSize: 16,
     opacity: 0.6,
   },
 });

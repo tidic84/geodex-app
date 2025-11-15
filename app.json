@@ -17,11 +17,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#2563EB"
       },
-      "package": "com.geodex.app",
-      "permissions": [
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
-      ]
+      "package": "com.geodex.app"
     },
     "web": {
       "bundler": "metro",
@@ -30,7 +26,6 @@
     },
     "plugins": [
       "expo-router",
-      "expo-location",
       [
         "expo-splash-screen",
         {
