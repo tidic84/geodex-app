@@ -1,51 +1,28 @@
 import React from 'react';
-import { StyleSheet, ScrollView, View, Pressable, Alert } from 'react-native';
+import { StyleSheet, ScrollView, View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
-import { GeodeCard } from '@/components/GeodeCard';
+import { Card } from '@/components/Card';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useInventory } from '@/hooks/useInventory';
-import { GEODE_TYPES } from '@/services/gemService';
+import { GEODE_TYPES, GEMS, RARITY_COLORS } from '@/services/gemService';
 
 export default function ShopScreen() {
-  const { coins, spendCoins } = useInventory();
+  const { coins } = useInventory();
+  const router = useRouter();
   const textColor = useThemeColor({}, 'text');
   const textSecondaryColor = useThemeColor({}, 'textSecondary');
   const primaryColor = useThemeColor({}, 'primary');
 
-  const handleBuyGeode = (geodeId: string) => {
-    const geode = GEODE_TYPES.find((g) => g.id === geodeId);
-    if (!geode) return;
-
-    if (coins < geode.cost) {
-      Alert.alert(
-        'Pas assez de pièces',
-        `Il vous faut ${geode.cost} pièces pour acheter cette géode. Vendez des pierres pour obtenir plus de pièces !`,
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
-    Alert.alert(
-      'Acheter une géode',
-      `Voulez-vous acheter ${geode.name} pour ${geode.cost} pièces ?`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Acheter',
-          onPress: () => {
-            if (spendCoins(geode.cost)) {
-              Alert.alert(
-                'Achat réussi!',
-                `Vous avez acheté ${geode.name}! Allez dans l'onglet "Ouvrir" pour l'ouvrir.`,
-                [{ text: 'OK' }]
-              );
-            }
-          },
-        },
-      ]
-    );
+  // Get rarity distribution for gems
+  const rarityStats = {
+    common: GEMS.filter(g => g.rarity === 'common').length,
+    uncommon: GEMS.filter(g => g.rarity === 'uncommon').length,
+    rare: GEMS.filter(g => g.rarity === 'rare').length,
+    epic: GEMS.filter(g => g.rarity === 'epic').length,
+    legendary: GEMS.filter(g => g.rarity === 'legendary').length,
   };
 
   return (
@@ -54,10 +31,10 @@ export default function ShopScreen() {
       <View style={styles.header}>
         <View>
           <ThemedText type="title" style={styles.title}>
-            Boutique
+            Guide
           </ThemedText>
           <ThemedText style={[styles.subtitle, { color: textSecondaryColor }]}>
-            Achetez des géodes avec vos pièces
+            Informations sur les géodes
           </ThemedText>
         </View>
         <View style={[styles.coinsBadge, { backgroundColor: `${primaryColor}15` }]}>
@@ -66,50 +43,82 @@ export default function ShopScreen() {
         </View>
       </View>
 
-      {/* Info Banner */}
-      <View style={[styles.infoBanner, { backgroundColor: `${primaryColor}15` }]}>
-        <Ionicons name="information-circle" size={20} color={primaryColor} />
-        <ThemedText style={[styles.infoText, { color: textColor }]}>
-          Vendez vos pierres précieuses pour obtenir plus de pièces
-        </ThemedText>
-      </View>
-
-      {/* Geodes List */}
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.geodeList}
+        contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <ThemedText style={styles.sectionTitle}>Géodes disponibles</ThemedText>
-
-        {GEODE_TYPES.map((geode) => (
-          <Pressable key={geode.id} onPress={() => handleBuyGeode(geode.id)}>
-            <GeodeCard geode={geode} coins={coins} showCost />
-          </Pressable>
-        ))}
-
-        {/* Daily Rewards Section */}
+        {/* Rarity Guide */}
         <View style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>Pièces gratuites</ThemedText>
-          <View style={[styles.rewardCard, { borderColor: primaryColor }]}>
-            <View style={styles.rewardIcon}>
-              <Ionicons name="gift" size={32} color={primaryColor} />
-            </View>
-            <View style={styles.rewardContent}>
-              <ThemedText style={styles.rewardTitle}>Récompense quotidienne</ThemedText>
-              <ThemedText style={[styles.rewardDesc, { color: textSecondaryColor }]}>
-                Revenez demain pour obtenir 50 pièces gratuites!
-              </ThemedText>
-            </View>
-            <Pressable
-              style={[styles.rewardButton, { backgroundColor: `${primaryColor}30` }]}
-              disabled
-            >
-              <ThemedText style={[styles.rewardButtonText, { color: primaryColor }]}>
-                Bientôt
-              </ThemedText>
-            </Pressable>
-          </View>
+          <ThemedText style={styles.sectionTitle}>Raretés des pierres</ThemedText>
+          <Card style={styles.rarityCard}>
+            {Object.entries(rarityStats).map(([rarity, count]) => (
+              <View key={rarity} style={styles.rarityRow}>
+                <View style={[styles.rarityDot, { backgroundColor: RARITY_COLORS[rarity as keyof typeof RARITY_COLORS] }]} />
+                <ThemedText style={styles.rarityName}>
+                  {rarity.charAt(0).toUpperCase() + rarity.slice(1)}
+                </ThemedText>
+                <ThemedText style={[styles.rarityCount, { color: textSecondaryColor }]}>
+                  {count} pierres
+                </ThemedText>
+              </View>
+            ))}
+          </Card>
+        </View>
+
+        {/* Geodes Guide */}
+        <View style={styles.section}>
+          <ThemedText style={styles.sectionTitle}>Types de géodes</ThemedText>
+          {GEODE_TYPES.map((geode) => (
+            <Card key={geode.id} style={styles.geodeCard} onPress={() => router.push('/')}>
+              <View style={[styles.geodeIcon, { backgroundColor: geode.color }]}>
+                <Text style={styles.geodeEmoji}>🪨</Text>
+              </View>
+              <View style={styles.geodeInfo}>
+                <ThemedText style={styles.geodeName}>{geode.name}</ThemedText>
+                <View style={styles.geodeStats}>
+                  <View style={styles.geodeStat}>
+                    <Ionicons name="diamond" size={14} color={primaryColor} />
+                    <ThemedText style={[styles.geodeStatText, { color: textSecondaryColor }]}>
+                      {geode.minGems}-{geode.maxGems} pierres
+                    </ThemedText>
+                  </View>
+                  <View style={styles.geodeStat}>
+                    <Ionicons name="cash" size={14} color="#F59E0B" />
+                    <ThemedText style={[styles.geodeStatText, { color: textSecondaryColor }]}>
+                      {geode.cost} pièces
+                    </ThemedText>
+                  </View>
+                </View>
+                <ThemedText style={[styles.geodeHint, { color: primaryColor }]}>
+                  Appuyer pour ouvrir →
+                </ThemedText>
+              </View>
+            </Card>
+          ))}
+        </View>
+
+        {/* Tips */}
+        <View style={styles.section}>
+          <ThemedText style={styles.sectionTitle}>Conseils</ThemedText>
+          <Card style={styles.tipCard}>
+            <Ionicons name="bulb" size={24} color="#F59E0B" />
+            <ThemedText style={[styles.tipText, { color: textColor }]}>
+              Les géodes plus chères ont plus de chances de contenir des pierres rares !
+            </ThemedText>
+          </Card>
+          <Card style={styles.tipCard}>
+            <Ionicons name="gift" size={24} color="#10B981" />
+            <ThemedText style={[styles.tipText, { color: textColor }]}>
+              Complétez des missions pour gagner des pièces gratuites !
+            </ThemedText>
+          </Card>
+          <Card style={styles.tipCard}>
+            <Ionicons name="lock-closed" size={24} color="#8B5CF6" />
+            <ThemedText style={[styles.tipText, { color: textColor }]}>
+              Vous ne pouvez pas vendre votre dernière pierre d'un type pour préserver votre collection.
+            </ThemedText>
+          </Card>
         </View>
       </ScrollView>
     </ThemedView>
@@ -148,62 +157,95 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
-  infoBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginHorizontal: 20,
-    marginBottom: 20,
-    padding: 16,
-    borderRadius: 12,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: 14,
-  },
   scrollView: {
     flex: 1,
   },
-  geodeList: {
+  content: {
     paddingHorizontal: 20,
     paddingBottom: 100,
+  },
+  section: {
+    marginBottom: 24,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  section: {
-    marginTop: 24,
+  rarityCard: {
+    padding: 16,
   },
-  rewardCard: {
+  rarityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  rarityDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 12,
+  },
+  rarityName: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  rarityCount: {
+    fontSize: 14,
+  },
+  geodeCard: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    borderRadius: 16,
-    borderWidth: 2,
+    marginBottom: 12,
   },
-  rewardIcon: {
-    marginRight: 16,
+  geodeIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
-  rewardContent: {
+  geodeEmoji: {
+    fontSize: 28,
+  },
+  geodeInfo: {
     flex: 1,
   },
-  rewardTitle: {
+  geodeName: {
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
   },
-  rewardDesc: {
-    fontSize: 13,
+  geodeStats: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 4,
   },
-  rewardButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
+  geodeStat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
-  rewardButtonText: {
-    fontSize: 14,
+  geodeStatText: {
+    fontSize: 12,
+  },
+  geodeHint: {
+    fontSize: 12,
     fontWeight: '600',
+  },
+  tipCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    marginBottom: 12,
+    gap: 12,
+  },
+  tipText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });
