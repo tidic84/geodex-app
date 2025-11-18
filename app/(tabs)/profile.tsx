@@ -1,16 +1,25 @@
-import React from 'react';
-import { StyleSheet, ScrollView, View, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, ScrollView, View, Alert, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { Card } from '@/components/Card';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useInventory } from '@/hooks/useInventory';
+import { useMissions } from '@/hooks/useMissions';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { GEMS } from '@/services/gemService';
 
 export default function ProfileScreen() {
-  const { inventory, coins, getTotalValue, getTotalGems, getUniqueGems } = useInventory();
+  const { inventory, coins, geodesOpened, getTotalValue, getTotalGems, getUniqueGems, getRarityCount, addCoins } = useInventory();
+  const missions = useMissions({
+    totalGems: getTotalGems(),
+    uniqueGems: getUniqueGems(),
+    coins,
+    geodesOpened,
+    rarityCount: getRarityCount(),
+  });
+  const [showAllMissions, setShowAllMissions] = useState(false);
   const colorScheme = useColorScheme();
   const textColor = useThemeColor({}, 'text');
   const textSecondaryColor = useThemeColor({}, 'textSecondary');
@@ -32,18 +41,36 @@ export default function ProfileScreen() {
       color: '#8B5CF6',
     },
     {
+      icon: 'hammer' as const,
+      label: 'Géodes ouvertes',
+      value: geodesOpened,
+      color: '#EF4444',
+    },
+    {
       icon: 'cash' as const,
       label: 'Pièces',
       value: coins,
       color: '#F59E0B',
     },
-    {
-      icon: 'trending-up' as const,
-      label: 'Valeur totale',
-      value: getTotalValue(),
-      color: '#10B981',
-    },
   ];
+
+  const handleClaimMission = async (missionId: string) => {
+    const success = await missions.claimReward(missionId, (reward) => {
+      addCoins(reward);
+      Alert.alert(
+        '🎉 Mission complétée !',
+        `Vous avez gagné ${reward} pièces !`,
+        [{ text: 'Super !' }]
+      );
+    });
+
+    if (!success) {
+      Alert.alert('Erreur', 'Impossible de réclamer cette récompense.');
+    }
+  };
+
+  const activeMissions = missions.getActiveMissions();
+  const displayedMissions = showAllMissions ? activeMissions : activeMissions.slice(0, 5);
 
   const handleResetProgress = () => {
     Alert.alert(
@@ -117,59 +144,89 @@ export default function ProfileScreen() {
           </Card>
         </View>
 
-        {/* Achievements */}
+        {/* Missions */}
         <View style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>Succès</ThemedText>
-          <Card style={styles.achievementCard}>
-            <View style={[styles.achievementIcon, { backgroundColor: '#F59E0B20' }]}>
-              <Ionicons name="ribbon" size={28} color="#F59E0B" />
-            </View>
-            <View style={styles.achievementContent}>
-              <ThemedText style={styles.achievementTitle}>Première Pierre</ThemedText>
-              <ThemedText style={[styles.achievementDesc, { color: textSecondaryColor }]}>
-                Ouvrir votre première géode
-              </ThemedText>
-            </View>
-            <Ionicons
-              name={getTotalGems() > 0 ? 'checkmark-circle' : 'lock-closed'}
-              size={24}
-              color={getTotalGems() > 0 ? '#10B981' : textSecondaryColor}
-            />
-          </Card>
+          <View style={styles.sectionHeader}>
+            <ThemedText style={styles.sectionTitle}>Missions</ThemedText>
+            {missions.getTotalRewardsAvailable() > 0 && (
+              <View style={[styles.rewardBadge, { backgroundColor: '#10B98120' }]}>
+                <Ionicons name="gift" size={16} color="#10B981" />
+                <ThemedText style={[styles.rewardText, { color: '#10B981' }]}>
+                  +{missions.getTotalRewardsAvailable()}
+                </ThemedText>
+              </View>
+            )}
+          </View>
 
-          <Card style={styles.achievementCard}>
-            <View style={[styles.achievementIcon, { backgroundColor: '#2563EB20' }]}>
-              <Ionicons name="diamond" size={28} color="#2563EB" />
-            </View>
-            <View style={styles.achievementContent}>
-              <ThemedText style={styles.achievementTitle}>Collectionneur</ThemedText>
-              <ThemedText style={[styles.achievementDesc, { color: textSecondaryColor }]}>
-                Collecter 10 pierres différentes
+          {displayedMissions.length === 0 ? (
+            <Card style={styles.emptyMissionsCard}>
+              <Ionicons name="checkmark-done-circle" size={48} color="#10B981" />
+              <ThemedText style={styles.emptyMissionsTitle}>
+                Toutes les missions sont complétées !
               </ThemedText>
-            </View>
-            <Ionicons
-              name={getUniqueGems() >= 10 ? 'checkmark-circle' : 'lock-closed'}
-              size={24}
-              color={getUniqueGems() >= 10 ? '#10B981' : textSecondaryColor}
-            />
-          </Card>
-
-          <Card style={styles.achievementCard}>
-            <View style={[styles.achievementIcon, { backgroundColor: '#8B5CF620' }]}>
-              <Ionicons name="sparkles" size={28} color="#8B5CF6" />
-            </View>
-            <View style={styles.achievementContent}>
-              <ThemedText style={styles.achievementTitle}>Expert</ThemedText>
-              <ThemedText style={[styles.achievementDesc, { color: textSecondaryColor }]}>
-                Compléter 100% de la collection
+              <ThemedText style={[styles.emptyMissionsDesc, { color: textSecondaryColor }]}>
+                Revenez plus tard pour de nouvelles missions
               </ThemedText>
-            </View>
-            <Ionicons
-              name={collectionProgress === 100 ? 'checkmark-circle' : 'lock-closed'}
-              size={24}
-              color={collectionProgress === 100 ? '#10B981' : textSecondaryColor}
-            />
-          </Card>
+            </Card>
+          ) : (
+            <>
+              {displayedMissions.map(({ mission, progress, status, percentage }) => (
+                <Card key={mission.id} style={styles.missionCard}>
+                  <View style={styles.missionLeft}>
+                    <View style={[styles.missionIcon, { backgroundColor: primaryColor + '20' }]}>
+                      <ThemedText style={styles.missionEmoji}>{mission.icon}</ThemedText>
+                    </View>
+                    <View style={styles.missionContent}>
+                      <ThemedText style={styles.missionTitle}>{mission.title}</ThemedText>
+                      <ThemedText style={[styles.missionDesc, { color: textSecondaryColor }]}>
+                        {mission.description}
+                      </ThemedText>
+                      <View style={styles.missionProgress}>
+                        <View style={[styles.progressBarBg, { backgroundColor: textSecondaryColor + '20' }]}>
+                          <View
+                            style={[
+                              styles.progressBarMission,
+                              {
+                                backgroundColor: status === 'completed' ? '#10B981' : primaryColor,
+                                width: `${percentage}%`,
+                              },
+                            ]}
+                          />
+                        </View>
+                        <ThemedText style={[styles.progressLabel, { color: textSecondaryColor }]}>
+                          {progress}/{mission.target}
+                        </ThemedText>
+                      </View>
+                    </View>
+                  </View>
+                  {status === 'completed' ? (
+                    <Pressable
+                      onPress={() => handleClaimMission(mission.id)}
+                      style={[styles.claimButton, { backgroundColor: '#10B981' }]}
+                    >
+                      <Ionicons name="gift" size={20} color="#FFFFFF" />
+                      <ThemedText style={styles.claimText}>+{mission.reward}</ThemedText>
+                    </Pressable>
+                  ) : (
+                    <View style={[styles.rewardBadgeSmall, { backgroundColor: primaryColor + '20' }]}>
+                      <Ionicons name="cash" size={14} color={primaryColor} />
+                      <ThemedText style={[styles.rewardTextSmall, { color: primaryColor }]}>
+                        {mission.reward}
+                      </ThemedText>
+                    </View>
+                  )}
+                </Card>
+              ))}
+              {!showAllMissions && activeMissions.length > 5 && (
+                <Pressable onPress={() => setShowAllMissions(true)} style={styles.showMoreButton}>
+                  <ThemedText style={[styles.showMoreText, { color: primaryColor }]}>
+                    Voir toutes les missions ({activeMissions.length})
+                  </ThemedText>
+                  <Ionicons name="chevron-down" size={20} color={primaryColor} />
+                </Pressable>
+              )}
+            </>
+          )}
         </View>
 
         {/* Settings */}
@@ -257,10 +314,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 24,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    marginBottom: 12,
+  },
+  rewardBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  rewardText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   progressCard: {
     padding: 16,
@@ -329,5 +403,110 @@ const styles = StyleSheet.create({
   },
   settingValue: {
     fontSize: 14,
+  },
+  missionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    marginBottom: 12,
+  },
+  missionLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  missionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  missionEmoji: {
+    fontSize: 24,
+  },
+  missionContent: {
+    flex: 1,
+  },
+  missionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  missionDesc: {
+    fontSize: 13,
+    marginBottom: 8,
+  },
+  missionProgress: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  progressBarBg: {
+    flex: 1,
+    height: 6,
+    borderRadius: 3,
+  },
+  progressBarMission: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  progressLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    minWidth: 40,
+  },
+  claimButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  claimText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  rewardBadgeSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  rewardTextSmall: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  showMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 12,
+  },
+  showMoreText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  emptyMissionsCard: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  emptyMissionsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 16,
+    marginBottom: 4,
+  },
+  emptyMissionsDesc: {
+    fontSize: 14,
+    textAlign: 'center',
   },
 });

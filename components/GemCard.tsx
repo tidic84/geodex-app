@@ -53,8 +53,17 @@ export function GemCard({ gem, quantity, onPress, onSell, showValue = true }: Ge
       </View>
 
       {onSell && quantity && quantity > 0 && (
-        <Pressable onPress={onSell} style={styles.sellButton} hitSlop={8}>
-          <Ionicons name="cash-outline" size={24} color="#10B981" />
+        <Pressable
+          onPress={quantity > 1 ? onSell : undefined}
+          style={[styles.sellButton, quantity === 1 && styles.sellButtonDisabled]}
+          hitSlop={8}
+          disabled={quantity === 1}
+        >
+          <Ionicons
+            name={quantity === 1 ? "lock-closed" : "cash-outline"}
+            size={24}
+            color={quantity === 1 ? textSecondaryColor : "#10B981"}
+          />
         </Pressable>
       )}
     </Card>
@@ -130,5 +139,9 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 8,
     backgroundColor: '#10B98120',
+  },
+  sellButtonDisabled: {
+    backgroundColor: '#6B728020',
+    opacity: 0.6,
   },
 });

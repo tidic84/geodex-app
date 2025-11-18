@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Gem } from '@/services/gemService';
+import { Gem, GemRarity } from '@/services/gemService';
 
 const INVENTORY_KEY = '@geodex_inventory';
 const COINS_KEY = '@geodex_coins';
+const GEODES_OPENED_KEY = '@geodex_geodes_opened';
 
 export type InventoryItem = {
   gem: Gem;
@@ -14,6 +15,7 @@ export type InventoryItem = {
 export function useInventory() {
   const [inventory, setInventory] = useState<Map<string, InventoryItem>>(new Map());
   const [coins, setCoins] = useState(1000); // Start with 1000 coins
+  const [geodesOpened, setGeodesOpened] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -22,9 +24,10 @@ export function useInventory() {
 
   const loadInventory = async () => {
     try {
-      const [storedInventory, storedCoins] = await Promise.all([
+      const [storedInventory, storedCoins, storedGeodesOpened] = await Promise.all([
         AsyncStorage.getItem(INVENTORY_KEY),
         AsyncStorage.getItem(COINS_KEY),
+        AsyncStorage.getItem(GEODES_OPENED_KEY),
       ]);
 
       if (storedInventory) {
@@ -34,6 +37,10 @@ export function useInventory() {
 
       if (storedCoins) {
         setCoins(parseInt(storedCoins, 10));
+      }
+
+      if (storedGeodesOpened) {
+        setGeodesOpened(parseInt(storedGeodesOpened, 10));
       }
     } catch (error) {
       console.error('Error loading inventory:', error);
@@ -61,6 +68,22 @@ export function useInventory() {
     }
   };
 
+  const saveGeodesOpened = async (count: number) => {
+    try {
+      await AsyncStorage.setItem(GEODES_OPENED_KEY, count.toString());
+    } catch (error) {
+      console.error('Error saving geodes opened:', error);
+    }
+  };
+
+  const incrementGeodesOpened = () => {
+    setGeodesOpened((prev) => {
+      const newCount = prev + 1;
+      saveGeodesOpened(newCount);
+      return newCount;
+    });
+  };
+
   const addGems = (gems: Gem[]) => {
     setInventory((prev) => {
       const newInventory = new Map(prev);
@@ -82,6 +105,9 @@ export function useInventory() {
       saveInventory(newInventory);
       return newInventory;
     });
+
+    // Increment geodes opened count
+    incrementGeodesOpened();
   };
 
   const addCoins = (amount: number) => {
@@ -106,26 +132,33 @@ export function useInventory() {
 
   const sellGem = (gemId: string): boolean => {
     const item = inventory.get(gemId);
-    if (!item || item.quantity === 0) {
+    // Don't allow selling if we don't have the item or if it's the last one (keep at least 1 for collection)
+    if (!item || item.quantity <= 1) {
       return false;
     }
 
+    const gemValue = item.gem.value;
+
+    // Update both inventory and coins in a single state update cycle
     setInventory((prev) => {
       const newInventory = new Map(prev);
       const updatedItem = newInventory.get(gemId);
 
-      if (updatedItem) {
+      if (updatedItem && updatedItem.quantity > 1) {
         updatedItem.quantity -= 1;
-        if (updatedItem.quantity === 0) {
-          newInventory.delete(gemId);
-        }
         saveInventory(newInventory);
+
+        // Update coins immediately after inventory update
+        setCoins((prevCoins) => {
+          const newCoins = prevCoins + gemValue;
+          saveCoins(newCoins);
+          return newCoins;
+        });
       }
 
       return newInventory;
     });
 
-    addCoins(item.gem.value);
     return true;
   };
 
@@ -149,9 +182,26 @@ export function useInventory() {
     return inventory.size;
   };
 
+  const getRarityCount = (): { [key in GemRarity]: number } => {
+    const counts: { [key in GemRarity]: number } = {
+      common: 0,
+      uncommon: 0,
+      rare: 0,
+      epic: 0,
+      legendary: 0,
+    };
+
+    inventory.forEach((item) => {
+      counts[item.gem.rarity] += item.quantity;
+    });
+
+    return counts;
+  };
+
   return {
     inventory,
     coins,
+    geodesOpened,
     isLoading,
     addGems,
     addCoins,
@@ -160,5 +210,6 @@ export function useInventory() {
     getTotalValue,
     getTotalGems,
     getUniqueGems,
+    getRarityCount,
   };
 }
