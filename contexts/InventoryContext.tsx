@@ -5,6 +5,7 @@ import { Gem, GemRarity } from '@/services/gemService';
 const INVENTORY_KEY = '@geodex_inventory';
 const COINS_KEY = '@geodex_coins';
 const GEODES_OPENED_KEY = '@geodex_geodes_opened';
+const LAST_COLLECTION_KEY = '@geodex_last_collection';
 
 export type InventoryItem = {
   gem: Gem;
@@ -16,6 +17,7 @@ type InventoryContextType = {
   inventory: Map<string, InventoryItem>;
   coins: number;
   geodesOpened: number;
+  lastCollectionTime: number;
   isLoading: boolean;
   addGems: (gems: Gem[]) => void;
   addCoins: (amount: number) => void;
@@ -25,6 +27,9 @@ type InventoryContextType = {
   getTotalGems: () => number;
   getUniqueGems: () => number;
   getRarityCount: () => { [key in GemRarity]: number };
+  getPassiveIncomeRate: () => number;
+  getAccumulatedIncome: () => number;
+  collectIncome: () => number;
 };
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -33,6 +38,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const [inventory, setInventory] = useState<Map<string, InventoryItem>>(new Map());
   const [coins, setCoins] = useState(1000);
   const [geodesOpened, setGeodesOpened] = useState(0);
+  const [lastCollectionTime, setLastCollectionTime] = useState(Date.now());
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -41,10 +47,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const loadInventory = async () => {
     try {
-      const [storedInventory, storedCoins, storedGeodesOpened] = await Promise.all([
+      const [storedInventory, storedCoins, storedGeodesOpened, storedLastCollection] = await Promise.all([
         AsyncStorage.getItem(INVENTORY_KEY),
         AsyncStorage.getItem(COINS_KEY),
         AsyncStorage.getItem(GEODES_OPENED_KEY),
+        AsyncStorage.getItem(LAST_COLLECTION_KEY),
       ]);
 
       if (storedInventory) {
@@ -58,6 +65,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
       if (storedGeodesOpened) {
         setGeodesOpened(parseInt(storedGeodesOpened, 10));
+      }
+
+      if (storedLastCollection) {
+        setLastCollectionTime(parseInt(storedLastCollection, 10));
       }
     } catch (error) {
       console.error('Error loading inventory:', error);
@@ -211,12 +222,52 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     return counts;
   };
 
+  const saveLastCollectionTime = async (time: number) => {
+    try {
+      await AsyncStorage.setItem(LAST_COLLECTION_KEY, time.toString());
+    } catch (error) {
+      console.error('Error saving last collection time:', error);
+    }
+  };
+
+  // Calculate passive income rate per hour based on displayed gems
+  // Each gem generates income = gem.value * 0.1 per hour (10% of its value)
+  const getPassiveIncomeRate = (): number => {
+    let totalRate = 0;
+    inventory.forEach((item) => {
+      // Income per gem = value * 0.1 * quantity
+      totalRate += Math.floor(item.gem.value * 0.1) * item.quantity;
+    });
+    return totalRate;
+  };
+
+  // Calculate accumulated income since last collection
+  const getAccumulatedIncome = (): number => {
+    const now = Date.now();
+    const hoursElapsed = (now - lastCollectionTime) / (1000 * 60 * 60);
+    const rate = getPassiveIncomeRate();
+    return Math.floor(rate * hoursElapsed);
+  };
+
+  // Collect accumulated income and reset timer
+  const collectIncome = (): number => {
+    const income = getAccumulatedIncome();
+    if (income > 0) {
+      addCoins(income);
+      const now = Date.now();
+      setLastCollectionTime(now);
+      saveLastCollectionTime(now);
+    }
+    return income;
+  };
+
   return (
     <InventoryContext.Provider
       value={{
         inventory,
         coins,
         geodesOpened,
+        lastCollectionTime,
         isLoading,
         addGems,
         addCoins,
@@ -226,6 +277,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         getTotalGems,
         getUniqueGems,
         getRarityCount,
+        getPassiveIncomeRate,
+        getAccumulatedIncome,
+        collectIncome,
       }}
     >
       {children}

@@ -38,8 +38,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Collection',
-          tabBarIcon: ({ color }) => <Ionicons name="albums" size={24} color={color} />,
+          title: 'Musée',
+          tabBarIcon: ({ color }) => <Ionicons name="business" size={24} color={color} />,
         }}
       />
       <Tabs.Screen
