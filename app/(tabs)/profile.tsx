@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { StyleSheet, ScrollView, View, Alert, Pressable } from 'react-native';
+import { StyleSheet, ScrollView, View, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { Card } from '@/components/Card';
+import { CustomModal } from '@/components/CustomModal';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useInventory } from '@/hooks/useInventory';
 import { useMissions } from '@/hooks/useMissions';
@@ -20,10 +21,21 @@ export default function ProfileScreen() {
     rarityCount: getRarityCount(),
   });
   const [showAllMissions, setShowAllMissions] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalConfig, setModalConfig] = useState({
+    title: '',
+    message: '',
+    buttons: [{ text: 'OK' }] as Array<{ text: string; onPress?: () => void; style?: 'default' | 'cancel' | 'destructive' }>,
+  });
   const colorScheme = useColorScheme();
   const textColor = useThemeColor({}, 'text');
   const textSecondaryColor = useThemeColor({}, 'textSecondary');
   const primaryColor = useThemeColor({}, 'primary');
+
+  const showModal = (title: string, message: string, buttons: Array<{ text: string; onPress?: () => void; style?: 'default' | 'cancel' | 'destructive' }> = [{ text: 'OK' }]) => {
+    setModalConfig({ title, message, buttons });
+    setModalVisible(true);
+  };
 
   const collectionProgress = Math.round((getUniqueGems() / GEMS.length) * 100);
 
@@ -57,28 +69,20 @@ export default function ProfileScreen() {
   const handleClaimMission = async (missionId: string) => {
     const success = await missions.claimReward(missionId, (reward) => {
       addCoins(reward);
-      Alert.alert(
-        '🎉 Mission complétée !',
+      showModal(
+        'Mission complétée !',
         `Vous avez gagné ${reward} pièces !`,
         [{ text: 'Super !' }]
       );
     });
 
     if (!success) {
-      Alert.alert('Erreur', 'Impossible de réclamer cette récompense.');
+      showModal('Erreur', 'Impossible de réclamer cette récompense.');
     }
   };
 
   const activeMissions = missions.getActiveMissions();
   const displayedMissions = showAllMissions ? activeMissions : activeMissions.slice(0, 5);
-
-  const handleResetProgress = () => {
-    Alert.alert(
-      'Réinitialiser',
-      'Cette fonctionnalité permet de réinitialiser votre progression. Elle sera disponible prochainement!',
-      [{ text: 'OK' }]
-    );
-  };
 
   return (
     <ThemedView style={styles.container}>
@@ -245,6 +249,14 @@ export default function ProfileScreen() {
           </Card>
         </View>
       </ScrollView>
+
+      <CustomModal
+        visible={modalVisible}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        buttons={modalConfig.buttons}
+        onClose={() => setModalVisible(false)}
+      />
     </ThemedView>
   );
 }

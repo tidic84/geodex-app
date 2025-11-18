@@ -1,9 +1,10 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, View, Pressable, Alert } from 'react-native';
+import { StyleSheet, ScrollView, View, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { Card } from '@/components/Card';
+import { CustomModal } from '@/components/CustomModal';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useInventory } from '@/hooks/useInventory';
 import { GEMS, GemRarity, RARITY_COLORS } from '@/services/gemService';
@@ -13,6 +14,12 @@ const RARITY_FILTERS: (GemRarity | 'all')[] = ['all', 'common', 'uncommon', 'rar
 export default function MuseumScreen() {
   const [selectedRarity, setSelectedRarity] = useState<GemRarity | 'all'>('all');
   const [accumulatedIncome, setAccumulatedIncome] = useState(0);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalConfig, setModalConfig] = useState({
+    title: '',
+    message: '',
+    buttons: [{ text: 'OK' }] as Array<{ text: string; onPress?: () => void; style?: 'default' | 'cancel' | 'destructive' }>,
+  });
   const {
     inventory,
     sellGem,
@@ -48,17 +55,21 @@ export default function MuseumScreen() {
   const storagePercentage = storageCapacity > 0 ? Math.min(100, (accumulatedIncome / storageCapacity) * 100) : 0;
   const isStorageFull = accumulatedIncome >= storageCapacity;
 
+  const showModal = (title: string, message: string, buttons: Array<{ text: string; onPress?: () => void; style?: 'default' | 'cancel' | 'destructive' }> = [{ text: 'OK' }]) => {
+    setModalConfig({ title, message, buttons });
+    setModalVisible(true);
+  };
+
   const handleUpgradeStorage = () => {
     if (coins < upgradeCost) {
-      Alert.alert(
+      showModal(
         'Pas assez de pièces',
-        `Il vous faut ${upgradeCost} pièces pour améliorer le stockage.`,
-        [{ text: 'OK' }]
+        `Il vous faut ${upgradeCost} pièces pour améliorer le stockage.`
       );
       return;
     }
 
-    Alert.alert(
+    showModal(
       'Améliorer le stockage',
       `Améliorer au niveau ${storageLevel + 1} pour ${upgradeCost} pièces ?\n\nNouvelle capacité : ${Math.floor(1000 * Math.pow(1.5, storageLevel))} pièces`,
       [
@@ -67,8 +78,8 @@ export default function MuseumScreen() {
           text: 'Améliorer',
           onPress: () => {
             if (upgradeStorage()) {
-              Alert.alert(
-                '⬆️ Stockage amélioré !',
+              showModal(
+                'Stockage amélioré !',
                 `Votre stockage peut maintenant contenir ${Math.floor(1000 * Math.pow(1.5, storageLevel))} pièces !`,
                 [{ text: 'Super !' }]
               );
@@ -105,16 +116,15 @@ export default function MuseumScreen() {
   const handleCollectIncome = () => {
     if (accumulatedIncome > 0) {
       const collected = collectIncome();
-      Alert.alert(
-        '💰 Revenus collectés !',
+      showModal(
+        'Revenus collectés !',
         `Vous avez collecté ${collected} pièces de votre musée !`,
         [{ text: 'Super !' }]
       );
     } else {
-      Alert.alert(
+      showModal(
         'Pas de revenus',
-        'Vos revenus s\'accumulent au fil du temps. Revenez plus tard !',
-        [{ text: 'OK' }]
+        'Vos revenus s\'accumulent au fil du temps. Revenez plus tard !'
       );
     }
   };
@@ -336,6 +346,14 @@ export default function MuseumScreen() {
           </View>
         )}
       </ScrollView>
+
+      <CustomModal
+        visible={modalVisible}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        buttons={modalConfig.buttons}
+        onClose={() => setModalVisible(false)}
+      />
     </ThemedView>
   );
 }
@@ -493,13 +511,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
     borderWidth: 1,
   },
   filterText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '500',
   },
   scrollView: {
