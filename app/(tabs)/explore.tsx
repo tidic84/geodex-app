@@ -17,8 +17,12 @@ export default function MuseumScreen() {
     inventory,
     sellGem,
     coins,
+    storageLevel,
     getPassiveIncomeRate,
     getAccumulatedIncome,
+    getStorageCapacity,
+    getUpgradeCost,
+    upgradeStorage,
     collectIncome
   } = useInventory();
 
@@ -39,6 +43,41 @@ export default function MuseumScreen() {
   }, [getAccumulatedIncome]);
 
   const incomeRate = getPassiveIncomeRate();
+  const storageCapacity = getStorageCapacity();
+  const upgradeCost = getUpgradeCost();
+  const storagePercentage = storageCapacity > 0 ? Math.min(100, (accumulatedIncome / storageCapacity) * 100) : 0;
+  const isStorageFull = accumulatedIncome >= storageCapacity;
+
+  const handleUpgradeStorage = () => {
+    if (coins < upgradeCost) {
+      Alert.alert(
+        'Pas assez de pièces',
+        `Il vous faut ${upgradeCost} pièces pour améliorer le stockage.`,
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    Alert.alert(
+      'Améliorer le stockage',
+      `Améliorer au niveau ${storageLevel + 1} pour ${upgradeCost} pièces ?\n\nNouvelle capacité : ${Math.floor(1000 * Math.pow(1.5, storageLevel))} pièces`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Améliorer',
+          onPress: () => {
+            if (upgradeStorage()) {
+              Alert.alert(
+                '⬆️ Stockage amélioré !',
+                `Votre stockage peut maintenant contenir ${Math.floor(1000 * Math.pow(1.5, storageLevel))} pièces !`,
+                [{ text: 'Super !' }]
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const collectionStats = useMemo(() => {
     const owned = inventory.size;
@@ -114,27 +153,61 @@ export default function MuseumScreen() {
             </View>
             <View style={styles.accumulatedContainer}>
               <ThemedText style={[styles.accumulatedLabel, { color: textSecondaryColor }]}>
-                Accumulé
+                Stockage Niv.{storageLevel}
               </ThemedText>
-              <ThemedText style={[styles.accumulatedValue, { color: '#F59E0B' }]}>
-                +{accumulatedIncome}
+              <ThemedText style={[styles.accumulatedValue, { color: isStorageFull ? '#EF4444' : '#F59E0B' }]}>
+                {accumulatedIncome}/{storageCapacity}
               </ThemedText>
             </View>
           </View>
-          <Pressable
-            onPress={handleCollectIncome}
-            style={[
-              styles.collectButton,
-              {
-                backgroundColor: accumulatedIncome > 0 ? '#10B981' : textSecondaryColor + '40',
-              }
-            ]}
-          >
-            <Ionicons name="wallet" size={20} color="#FFFFFF" />
-            <ThemedText style={styles.collectButtonText}>
-              {accumulatedIncome > 0 ? `Collecter ${accumulatedIncome}` : 'Rien à collecter'}
-            </ThemedText>
-          </Pressable>
+
+          {/* Storage Progress Bar */}
+          <View style={styles.storageProgressContainer}>
+            <View style={[styles.storageProgressBar, { backgroundColor: borderColor }]}>
+              <View
+                style={[
+                  styles.storageProgressFill,
+                  {
+                    backgroundColor: isStorageFull ? '#EF4444' : '#F59E0B',
+                    width: `${storagePercentage}%`,
+                  },
+                ]}
+              />
+            </View>
+            {isStorageFull && (
+              <ThemedText style={styles.storageFull}>PLEIN</ThemedText>
+            )}
+          </View>
+
+          <View style={styles.incomeActions}>
+            <Pressable
+              onPress={handleCollectIncome}
+              style={[
+                styles.collectButton,
+                {
+                  backgroundColor: accumulatedIncome > 0 ? '#10B981' : textSecondaryColor + '40',
+                  flex: 1,
+                }
+              ]}
+            >
+              <Ionicons name="wallet" size={20} color="#FFFFFF" />
+              <ThemedText style={styles.collectButtonText}>
+                {accumulatedIncome > 0 ? `Collecter` : 'Vide'}
+              </ThemedText>
+            </Pressable>
+            <Pressable
+              onPress={handleUpgradeStorage}
+              style={[
+                styles.upgradeButton,
+                {
+                  backgroundColor: coins >= upgradeCost ? primaryColor : textSecondaryColor + '40',
+                }
+              ]}
+            >
+              <Ionicons name="arrow-up-circle" size={20} color="#FFFFFF" />
+              <ThemedText style={styles.upgradeButtonText}>{upgradeCost}</ThemedText>
+            </Pressable>
+          </View>
         </Card>
 
         <View style={styles.statsContainer}>
@@ -350,6 +423,45 @@ const styles = StyleSheet.create({
   collectButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  storageProgressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  storageProgressBar: {
+    flex: 1,
+    height: 10,
+    borderRadius: 5,
+    overflow: 'hidden',
+  },
+  storageProgressFill: {
+    height: '100%',
+    borderRadius: 5,
+  },
+  storageFull: {
+    color: '#EF4444',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  incomeActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  upgradeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+  },
+  upgradeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
     fontWeight: '600',
   },
   statsContainer: {

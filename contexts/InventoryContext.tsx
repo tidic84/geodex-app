@@ -6,6 +6,13 @@ const INVENTORY_KEY = '@geodex_inventory';
 const COINS_KEY = '@geodex_coins';
 const GEODES_OPENED_KEY = '@geodex_geodes_opened';
 const LAST_COLLECTION_KEY = '@geodex_last_collection';
+const STORAGE_LEVEL_KEY = '@geodex_storage_level';
+
+// Storage upgrade configuration
+const BASE_STORAGE_CAPACITY = 1000;
+const STORAGE_MULTIPLIER = 1.5; // Each level multiplies capacity by 1.5
+const BASE_UPGRADE_COST = 500;
+const UPGRADE_COST_MULTIPLIER = 2; // Each level doubles the upgrade cost
 
 export type InventoryItem = {
   gem: Gem;
@@ -18,6 +25,7 @@ type InventoryContextType = {
   coins: number;
   geodesOpened: number;
   lastCollectionTime: number;
+  storageLevel: number;
   isLoading: boolean;
   addGems: (gems: Gem[]) => void;
   addCoins: (amount: number) => void;
@@ -29,6 +37,9 @@ type InventoryContextType = {
   getRarityCount: () => { [key in GemRarity]: number };
   getPassiveIncomeRate: () => number;
   getAccumulatedIncome: () => number;
+  getStorageCapacity: () => number;
+  getUpgradeCost: () => number;
+  upgradeStorage: () => boolean;
   collectIncome: () => number;
 };
 
@@ -39,6 +50,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const [coins, setCoins] = useState(1000);
   const [geodesOpened, setGeodesOpened] = useState(0);
   const [lastCollectionTime, setLastCollectionTime] = useState(Date.now());
+  const [storageLevel, setStorageLevel] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -47,11 +59,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const loadInventory = async () => {
     try {
-      const [storedInventory, storedCoins, storedGeodesOpened, storedLastCollection] = await Promise.all([
+      const [storedInventory, storedCoins, storedGeodesOpened, storedLastCollection, storedStorageLevel] = await Promise.all([
         AsyncStorage.getItem(INVENTORY_KEY),
         AsyncStorage.getItem(COINS_KEY),
         AsyncStorage.getItem(GEODES_OPENED_KEY),
         AsyncStorage.getItem(LAST_COLLECTION_KEY),
+        AsyncStorage.getItem(STORAGE_LEVEL_KEY),
       ]);
 
       if (storedInventory) {
@@ -69,6 +82,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
       if (storedLastCollection) {
         setLastCollectionTime(parseInt(storedLastCollection, 10));
+      }
+
+      if (storedStorageLevel) {
+        setStorageLevel(parseInt(storedStorageLevel, 10));
       }
     } catch (error) {
       console.error('Error loading inventory:', error);
@@ -230,6 +247,43 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const saveStorageLevel = async (level: number) => {
+    try {
+      await AsyncStorage.setItem(STORAGE_LEVEL_KEY, level.toString());
+    } catch (error) {
+      console.error('Error saving storage level:', error);
+    }
+  };
+
+  // Calculate storage capacity based on level
+  const getStorageCapacity = (): number => {
+    return Math.floor(BASE_STORAGE_CAPACITY * Math.pow(STORAGE_MULTIPLIER, storageLevel - 1));
+  };
+
+  // Calculate upgrade cost for next level
+  const getUpgradeCost = (): number => {
+    return Math.floor(BASE_UPGRADE_COST * Math.pow(UPGRADE_COST_MULTIPLIER, storageLevel - 1));
+  };
+
+  // Upgrade storage capacity
+  const upgradeStorage = (): boolean => {
+    const cost = getUpgradeCost();
+    if (coins >= cost) {
+      setCoins((prev) => {
+        const newCoins = prev - cost;
+        saveCoins(newCoins);
+        return newCoins;
+      });
+      setStorageLevel((prev) => {
+        const newLevel = prev + 1;
+        saveStorageLevel(newLevel);
+        return newLevel;
+      });
+      return true;
+    }
+    return false;
+  };
+
   // Calculate passive income rate per hour based on displayed gems
   // Each gem generates income = gem.value * 0.1 per hour (10% of its value)
   const getPassiveIncomeRate = (): number => {
@@ -241,12 +295,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     return totalRate;
   };
 
-  // Calculate accumulated income since last collection
+  // Calculate accumulated income since last collection (capped at storage capacity)
   const getAccumulatedIncome = (): number => {
     const now = Date.now();
     const hoursElapsed = (now - lastCollectionTime) / (1000 * 60 * 60);
     const rate = getPassiveIncomeRate();
-    return Math.floor(rate * hoursElapsed);
+    const rawIncome = Math.floor(rate * hoursElapsed);
+    const capacity = getStorageCapacity();
+    return Math.min(rawIncome, capacity);
   };
 
   // Collect accumulated income and reset timer
@@ -268,6 +324,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         coins,
         geodesOpened,
         lastCollectionTime,
+        storageLevel,
         isLoading,
         addGems,
         addCoins,
@@ -279,6 +336,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         getRarityCount,
         getPassiveIncomeRate,
         getAccumulatedIncome,
+        getStorageCapacity,
+        getUpgradeCost,
+        upgradeStorage,
         collectIncome,
       }}
     >
