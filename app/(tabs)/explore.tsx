@@ -504,20 +504,21 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   filtersContainer: {
-    marginBottom: 16,
+    marginBottom: 8,
+    maxHeight: 36,
   },
   filtersContent: {
     paddingHorizontal: 20,
-    gap: 8,
+    gap: 6,
   },
   filterChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
     borderWidth: 1,
   },
   filterText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
   },
   scrollView: {
