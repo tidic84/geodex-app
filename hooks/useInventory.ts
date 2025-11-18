@@ -13,7 +13,7 @@ export type InventoryItem = {
 
 export function useInventory() {
   const [inventory, setInventory] = useState<Map<string, InventoryItem>>(new Map());
-  const [coins, setCoins] = useState(100); // Start with 100 coins
+  const [coins, setCoins] = useState(1000); // Start with 1000 coins
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

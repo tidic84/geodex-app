@@ -12,7 +12,7 @@ const RARITY_FILTERS: (GemRarity | 'all')[] = ['all', 'common', 'uncommon', 'rar
 
 export default function CollectionScreen() {
   const [selectedRarity, setSelectedRarity] = useState<GemRarity | 'all'>('all');
-  const { inventory, sellGem } = useInventory();
+  const { inventory, sellGem, coins } = useInventory();
 
   const textColor = useThemeColor({}, 'text');
   const textSecondaryColor = useThemeColor({}, 'textSecondary');
@@ -49,9 +49,15 @@ export default function CollectionScreen() {
   return (
     <ThemedView style={styles.container}>
       <View style={styles.header}>
-        <ThemedText type="title" style={styles.title}>
-          Ma Collection
-        </ThemedText>
+        <View style={styles.headerTop}>
+          <ThemedText type="title" style={styles.title}>
+            Ma Collection
+          </ThemedText>
+          <View style={[styles.coinsBadge, { backgroundColor: `${primaryColor}15` }]}>
+            <Ionicons name="cash" size={20} color="#F59E0B" />
+            <ThemedText style={styles.coinsText}>{coins}</ThemedText>
+          </View>
+        </View>
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
             <Ionicons name="albums" size={20} color={primaryColor} />
@@ -164,10 +170,27 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 16,
   },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 16,
+  },
+  coinsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  coinsText: {
+    fontSize: 16,
+    fontWeight: '700',
   },
   statsContainer: {
     gap: 8,
