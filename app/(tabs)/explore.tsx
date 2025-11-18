@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, View, Pressable } from 'react-native';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { StyleSheet, ScrollView, View, Pressable, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
@@ -8,6 +8,7 @@ import { CustomModal } from '@/components/CustomModal';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useInventory } from '@/hooks/useInventory';
 import { GEMS, GemRarity, RARITY_COLORS } from '@/services/gemService';
+import { hapticsService } from '@/services/hapticsService';
 
 const RARITY_FILTERS: (GemRarity | 'all')[] = ['all', 'common', 'uncommon', 'rare', 'epic', 'legendary'];
 
@@ -61,7 +62,9 @@ export default function MuseumScreen() {
   };
 
   const handleUpgradeStorage = () => {
+    hapticsService.lightTap();
     if (coins < upgradeCost) {
+      hapticsService.error();
       showModal(
         'Pas assez de pièces',
         `Il vous faut ${upgradeCost} pièces pour améliorer le stockage.`
@@ -78,6 +81,7 @@ export default function MuseumScreen() {
           text: 'Améliorer',
           onPress: () => {
             if (upgradeStorage()) {
+              hapticsService.success();
               showModal(
                 'Stockage amélioré !',
                 `Votre stockage peut maintenant contenir ${Math.floor(1000 * Math.pow(1.5, storageLevel))} pièces !`,
@@ -114,19 +118,32 @@ export default function MuseumScreen() {
   }, [selectedRarity, inventory]);
 
   const handleCollectIncome = () => {
+    hapticsService.lightTap();
     if (accumulatedIncome > 0) {
       const collected = collectIncome();
+      hapticsService.collectCoins();
       showModal(
         'Revenus collectés !',
         `Vous avez collecté ${collected} pièces de votre musée !`,
         [{ text: 'Super !' }]
       );
     } else {
+      hapticsService.warning();
       showModal(
         'Pas de revenus',
         'Vos revenus s\'accumulent au fil du temps. Revenez plus tard !'
       );
     }
+  };
+
+  const handleSellGem = (gemId: string) => {
+    hapticsService.mediumTap();
+    sellGem(gemId);
+  };
+
+  const handleFilterPress = (rarity: GemRarity | 'all') => {
+    hapticsService.selection();
+    setSelectedRarity(rarity);
   };
 
   const getRarityLabel = (rarity: GemRarity | 'all'): string => {
@@ -251,7 +268,7 @@ export default function MuseumScreen() {
         {RARITY_FILTERS.map((rarity) => (
           <Pressable
             key={rarity}
-            onPress={() => setSelectedRarity(rarity)}
+            onPress={() => handleFilterPress(rarity)}
             style={[
               styles.filterChip,
               {
@@ -312,7 +329,7 @@ export default function MuseumScreen() {
                   </View>
                   {quantity > 1 && (
                     <Pressable
-                      onPress={() => sellGem(gem.id)}
+                      onPress={() => handleSellGem(gem.id)}
                       style={styles.sellButton}
                       hitSlop={8}
                     >

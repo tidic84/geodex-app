@@ -10,6 +10,7 @@ import { useInventory } from '@/hooks/useInventory';
 import { useMissions } from '@/hooks/useMissions';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { GEMS } from '@/services/gemService';
+import { hapticsService } from '@/services/hapticsService';
 
 export default function ProfileScreen() {
   const { inventory, coins, geodesOpened, getTotalValue, getTotalGems, getUniqueGems, getRarityCount, addCoins } = useInventory();
@@ -67,8 +68,10 @@ export default function ProfileScreen() {
   ];
 
   const handleClaimMission = async (missionId: string) => {
+    hapticsService.lightTap();
     const success = await missions.claimReward(missionId, (reward) => {
       addCoins(reward);
+      hapticsService.success();
       showModal(
         'Mission complétée !',
         `Vous avez gagné ${reward} pièces !`,
@@ -77,6 +80,7 @@ export default function ProfileScreen() {
     });
 
     if (!success) {
+      hapticsService.error();
       showModal('Erreur', 'Impossible de réclamer cette récompense.');
     }
   };

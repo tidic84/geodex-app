@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, Pressable, ScrollView, Modal, Animated } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { StyleSheet, View, Text, Pressable, ScrollView, Modal, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
@@ -8,12 +8,20 @@ import { GemCard } from '@/components/GemCard';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useInventory } from '@/hooks/useInventory';
 import { GEODE_TYPES, getGemsFromGeode, Gem } from '@/services/gemService';
+import { hapticsService } from '@/services/hapticsService';
 
 export default function HomeScreen() {
   const [selectedGeodeId, setSelectedGeodeId] = useState<string | null>(null);
   const [openedGems, setOpenedGems] = useState<Gem[]>([]);
   const [showRewardModal, setShowRewardModal] = useState(false);
-  const [scaleAnim] = useState(new Animated.Value(1));
+  const [isOpening, setIsOpening] = useState(false);
+
+  // Animations
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
+  const modalScaleAnim = useRef(new Animated.Value(0)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
 
   const { coins, spendCoins, addGems } = useInventory();
   const textColor = useThemeColor({}, 'text');
@@ -26,49 +34,132 @@ export default function HomeScreen() {
     : null;
 
   const handleGeodePress = (geodeId: string) => {
+    hapticsService.selection();
     setSelectedGeodeId(geodeId);
   };
 
-  const handleOpenGeode = () => {
-    if (!selectedGeode) return;
+  const handleOpenGeode = async () => {
+    if (!selectedGeode || isOpening) return;
 
     if (spendCoins(selectedGeode.cost)) {
-      // Animation de clic
-      Animated.sequence([
-        Animated.timing(scaleAnim, {
-          toValue: 0.9,
-          duration: 100,
+      setIsOpening(true);
+
+      // Haptic feedback for opening
+      hapticsService.geodeOpen();
+
+      // Complex animation sequence
+      // 1. Shake animation
+      const shakeSequence = Animated.sequence([
+        ...Array(6).fill(null).map((_, i) =>
+          Animated.timing(shakeAnim, {
+            toValue: i % 2 === 0 ? 10 : -10,
+            duration: 50,
+            useNativeDriver: true,
+          })
+        ),
+        Animated.timing(shakeAnim, {
+          toValue: 0,
+          duration: 50,
           useNativeDriver: true,
         }),
-        Animated.timing(scaleAnim, {
-          toValue: 1.1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnim, {
+      ]);
+
+      // 2. Scale and glow animation
+      const scaleGlowSequence = Animated.parallel([
+        Animated.sequence([
+          Animated.timing(scaleAnim, {
+            toValue: 0.8,
+            duration: 150,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scaleAnim, {
+            toValue: 1.3,
+            duration: 300,
+            easing: Easing.back(2),
+            useNativeDriver: true,
+          }),
+          Animated.timing(scaleAnim, {
+            toValue: 1,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.sequence([
+          Animated.timing(glowAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(glowAnim, {
+            toValue: 0,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.timing(rotateAnim, {
           toValue: 1,
-          duration: 100,
+          duration: 500,
           useNativeDriver: true,
         }),
-      ]).start();
+      ]);
+
+      // Run animations
+      Animated.sequence([shakeSequence, scaleGlowSequence]).start();
 
       // Obtenir les pierres
       const gems = getGemsFromGeode(selectedGeode);
       setOpenedGems(gems);
       addGems(gems);
 
+      // Check for rare gems and provide haptic feedback
+      const hasLegendary = gems.some(g => g.rarity === 'legendary');
+      const hasEpic = gems.some(g => g.rarity === 'epic');
+      const hasRare = gems.some(g => g.rarity === 'rare');
+
+      if (hasLegendary) {
+        setTimeout(() => hapticsService.legendaryGem(), 500);
+      } else if (hasEpic || hasRare) {
+        setTimeout(() => hapticsService.rareGem(), 500);
+      }
+
       // Afficher les récompenses après un délai
       setTimeout(() => {
         setShowRewardModal(true);
-      }, 400);
+        // Modal appear animation
+        Animated.spring(modalScaleAnim, {
+          toValue: 1,
+          friction: 8,
+          tension: 40,
+          useNativeDriver: true,
+        }).start();
+        setIsOpening(false);
+        // Reset rotation
+        rotateAnim.setValue(0);
+      }, 700);
+    } else {
+      hapticsService.error();
     }
   };
 
   const handleCloseModal = () => {
-    setShowRewardModal(false);
-    setOpenedGems([]);
-    setSelectedGeodeId(null);
+    hapticsService.lightTap();
+    // Animate modal out
+    Animated.timing(modalScaleAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowRewardModal(false);
+      setOpenedGems([]);
+      setSelectedGeodeId(null);
+    });
   };
+
+  // Interpolate rotation
+  const rotateInterpolate = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   return (
     <ThemedView style={styles.container}>
@@ -91,7 +182,27 @@ export default function HomeScreen() {
       {/* Selected Geode Display */}
       {selectedGeode && (
         <View style={styles.selectedContainer}>
-          <Animated.View style={[styles.geodeDisplay, { transform: [{ scale: scaleAnim }] }]}>
+          <Animated.View
+            style={[
+              styles.geodeDisplay,
+              {
+                transform: [
+                  { scale: scaleAnim },
+                  { translateX: shakeAnim },
+                  { rotate: rotateInterpolate },
+                ],
+              },
+            ]}
+          >
+            <Animated.View
+              style={[
+                styles.glowEffect,
+                {
+                  opacity: glowAnim,
+                  backgroundColor: selectedGeode.color,
+                },
+              ]}
+            />
             <View style={[styles.bigGeode, { backgroundColor: selectedGeode.color }]}>
               <Text style={styles.bigGeodeEmoji}>🪨</Text>
             </View>
@@ -183,7 +294,15 @@ export default function HomeScreen() {
         onRequestClose={handleCloseModal}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor }]}>
+          <Animated.View
+            style={[
+              styles.modalContent,
+              {
+                backgroundColor,
+                transform: [{ scale: modalScaleAnim }],
+              },
+            ]}
+          >
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>🎉 Félicitations !</Text>
               <Text style={[styles.modalSubtitle, { color: textSecondaryColor }]}>
@@ -197,10 +316,13 @@ export default function HomeScreen() {
               ))}
             </ScrollView>
 
-            <Pressable style={[styles.closeButton, { backgroundColor: primaryColor }]} onPress={handleCloseModal}>
+            <Pressable
+              style={[styles.closeButton, { backgroundColor: primaryColor }]}
+              onPress={handleCloseModal}
+            >
               <Text style={styles.closeButtonText}>Fermer</Text>
             </Pressable>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
     </ThemedView>
@@ -246,6 +368,15 @@ const styles = StyleSheet.create({
   },
   geodeDisplay: {
     marginBottom: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  glowEffect: {
+    position: 'absolute',
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    opacity: 0.5,
   },
   bigGeode: {
     width: 120,

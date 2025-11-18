@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   Modal,
   View,
   StyleSheet,
   TouchableOpacity,
   TouchableWithoutFeedback,
+  Animated,
 } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { hapticsService } from '@/services/hapticsService';
 
 type ModalButton = {
   text: string;
@@ -30,13 +32,37 @@ export function CustomModal({
   buttons = [{ text: 'OK', style: 'default' }],
   onClose,
 }: CustomModalProps) {
-  const backgroundColor = useThemeColor({}, 'background');
   const cardColor = useThemeColor({}, 'card');
-  const textColor = useThemeColor({}, 'text');
   const primaryColor = useThemeColor({}, 'primary');
   const textSecondaryColor = useThemeColor({}, 'textSecondary');
 
+  const scaleAnim = useRef(new Animated.Value(0)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      hapticsService.lightTap();
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          friction: 8,
+          tension: 65,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      scaleAnim.setValue(0);
+      opacityAnim.setValue(0);
+    }
+  }, [visible]);
+
   const handleButtonPress = (button: ModalButton) => {
+    hapticsService.lightTap();
     if (button.onPress) {
       button.onPress();
     }
@@ -60,13 +86,21 @@ export function CustomModal({
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType="none"
       onRequestClose={onClose}
     >
       <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.overlay}>
+        <Animated.View style={[styles.overlay, { opacity: opacityAnim }]}>
           <TouchableWithoutFeedback>
-            <View style={[styles.modalContainer, { backgroundColor: cardColor }]}>
+            <Animated.View
+              style={[
+                styles.modalContainer,
+                {
+                  backgroundColor: cardColor,
+                  transform: [{ scale: scaleAnim }],
+                },
+              ]}
+            >
               <View style={styles.content}>
                 <ThemedText style={styles.title}>{title}</ThemedText>
                 <ThemedText style={[styles.message, { color: textSecondaryColor }]}>
@@ -98,9 +132,9 @@ export function CustomModal({
                   </TouchableOpacity>
                 ))}
               </View>
-            </View>
+            </Animated.View>
           </TouchableWithoutFeedback>
-        </View>
+        </Animated.View>
       </TouchableWithoutFeedback>
     </Modal>
   );
